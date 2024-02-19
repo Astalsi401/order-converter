@@ -11,11 +11,7 @@ result = 'import'
 
 def readXlsx(path, converters: dict):
     '''讀取excel，若檔案不存在則回傳空dataframe'''
-    try:
-        df = pd.read_excel(path, converters=converters)
-        return pd.DataFrame() if df.empty else df
-    except:
-        return pd.DataFrame()
+    return pd.read_excel(path, converters=converters) if os.path.isfile(path) else pd.DataFrame()
 
 
 def getFilesName(path, ext=None):
