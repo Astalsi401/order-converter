@@ -131,6 +131,7 @@ class OutputColumns:
                 '數量': self.number,
                 '付款方式': self.pay,
             }
+        # 需四捨五入的欄位
         self.roundCols = [self.price, self.purchasePrice, self.purchaseSubtotal, self.fee, self.subtotal, self.profit]
 
 
@@ -173,85 +174,86 @@ class Converter:
         }
         # 如有複數來源檔案須將檔案合併
         self.df = self.concatFr()
-        if not self.df.empty:
-            logging.info(f'正在轉檔：{self.fr}')
-            # 付款代號
-            self.df = self.multiCondition(self.payCode, [self.oc.payCode])
-            # 刪除shopline已取消\非貨到付款且未付款的訂單
-            if self.oc.fr == ColumnType().shopline:
-                self.df = self.df.query(f'訂單狀態 != "已取消"')
-                self.df = self.df[~((self.df[self.oc.payCode] != 6) & (self.df[self.oc.payCode] != 3) & (self.df['付款狀態'] == '未付款'))]
-            # 辨別是否為該訂單第一件商品
-            self.df[self.count] = self.df.groupby(self.oc.code).cumcount()
-            # 訂單編號
-            self.df[self.oc.code] = self.df[self.oc.code].str.replace(r'#', '', regex=True)
-            # 郵遞區號取前三碼
-            self.df[self.oc.postCode] = self.df[self.oc.postCode].fillna('').apply(lambda x: x[:3])
-            # 更改訂單成立日期格式
-            self.df[self.oc.date] = self.df[self.oc.date].fillna('').astype(str).apply(lambda x: dt.strptime(x, self.timeFmt).strftime('%Y%m%d'))
-            # 付款方式
-            self.df[self.oc.pay] = self.df[self.oc.pay].str.replace(r'\([^\(|\)]*\)', '', regex=True)
-            # 商品總金額
-            self.df[self.oc.price] = self.df[self.price.sum].sum(axis=1)
-            # shopline商品總金額要減掉運費
-            if self.oc.fr in [ColumnType().shopline]:
-                self.df[self.oc.price] = self.df[self.oc.price] - self.df['運費']
-            if self.oc.fr in [ColumnType().shopee, ColumnType().shopline]:
-                self.df[self.tmp] = self.df[self.price.col] * self.df[self.oc.number]
-                self.df[self.oc.price] = self.df.groupby(self.oc.code)[self.oc.price].transform('first') / self.df.groupby(self.oc.code)[self.tmp].transform(lambda x: x.sum()) * self.df[self.tmp]
-            # shopline運費
-            if self.oc.fr in [ColumnType().shopline]:
-                ship = self.df.loc[self.df['運費'] > 0].copy()
-                ship[self.oc.productCode] = '888888888'
-                ship[self.oc.price] = ship['運費']
-                ship = ship[[self.oc.site, self.oc.code, self.oc.customer, self.oc.postCode, self.oc.address, self.oc.tel, self.oc.cel, self.oc.productCode, self.oc.date, self.oc.price]]
-                self.df = pd.concat([self.df, ship]).sort_values(by=[self.oc.date, self.oc.code])
-            # 合併商品總表中的資訊並計算撿貨費
-            self.df = self.productDetail(self.df)
-            # 撿貨費
-            self.df[self.oc.tally] = self.df['撿貨數量'] * self.df[self.oc.number] * 7.5
-            # 進貨小計
-            self.df[self.oc.purchaseSubtotal] = self.df[self.oc.purchasePrice] * self.df[self.oc.number]
-            # 成交手續費
-            self.df[self.oc.fee] = self.df[self.oc.price] * self.feeRate.pc + self.feeRate.add
-            if self.oc.fr in [ColumnType().yahoo]:
-                # 金流費用
-                self.df.loc[self.df[self.oc.payCode] == 1, self.oc.cashFee] = 0
-                self.df.loc[self.df[self.oc.payCode] == 4, self.oc.cashFee] = self.df[self.oc.price] * 0.02
-                self.df.loc[self.df[self.oc.pay] == '全家繳費', self.oc.cashFee] = 15
-                self.df.loc[self.df[self.oc.pay] == '7-11', self.oc.cashFee] = 48
-                # 訂單金額
-                self.df[self.oc.subtotal] = self.df.groupby(self.oc.code)[self.price.sum].transform(lambda x: x.sum()).sum(axis=1)
-            elif self.oc.fr in [ColumnType().shopee, ColumnType().shopline]:
-                # 訂單金額
-                self.df[self.oc.subtotal] = self.df[self.price.sum].sum(axis=1)
-            # 替換空白電話號碼為'****'
-            self.df.loc[self.df[self.oc.cel].isna(), self.oc.cel] = '****'
-            # 訂單處理費
-            self.df[self.oc.orderFee] = (self.df.groupby(self.oc.code)[self.oc.code].transform("count") - 1) * 10 + 26
-            # 運費
-            self.df = self.multiCondition(self.ship, [self.oc.ship])
-            # shopee隱碼服務費
-            self.df = self.multiCondition(self.serviceFee, [self.oc.serviceFee])
-            # 依倉庫調整撿貨費、訂單處理費、運費
-            self.df.loc[self.df[self.oc.warehouse].fillna('').str.contains(r'^(?:原廠出貨|公司倉)$', regex=True), [self.oc.tally, self.oc.orderFee]] = 0
-            self.df.loc[self.df[self.oc.warehouse] == '原廠出貨', self.oc.ship] = 0
-            # 如果不是第一件商品，則'運費','訂單處理費','隱碼服務費'為0
-            self.df.loc[self.df[self.count] != 0, [self.oc.ship, self.oc.orderFee, self.oc.serviceFee]] = 0
-            # 利潤
-            self.df[self.oc.subtotal] = self.df.groupby(self.oc.code)[self.oc.subtotal].transform('first')
-            self.df[self.oc.profit] = self.df[self.oc.subtotal] - self.df.groupby(self.oc.code)[self.oc.profitCols].transform(lambda x: x.sum()).sum(axis=1)
-            # 利潤百分比
-            self.df[self.oc.profitPc] = (self.df[self.oc.profit] / self.df[self.oc.profitDenominator] * 100).round(2).astype(str) + '%'
-            # 補齊需要的欄位
-            self.df = self.addColumns()
-            # 如果不是第一件商品，則'訂單金額','利潤','利潤百分比'為0
-            self.df.loc[self.df[self.count] != 0, [self.oc.subtotal, self.oc.profit, self.oc.profitPc]] = 0
-            # 價格四捨五入至整數
-            for col in self.oc.roundCols:
-                self.df[col] = self.df[col].fillna(0).round(0)
-            # 匯出需要的欄位
-            self.df = self.addColumns()[self.oc.finCols]
+        if self.df.empty:
+            return None
+        logging.info(f'正在轉檔：{self.fr}')
+        # 付款代號
+        self.df = self.multiCondition(self.payCode, [self.oc.payCode])
+        # 刪除shopline已取消\非貨到付款且未付款的訂單
+        if self.oc.fr == ColumnType().shopline:
+            self.df = self.df.query(f'訂單狀態 != "已取消"')
+            self.df = self.df[~((self.df[self.oc.payCode] != 6) & (self.df[self.oc.payCode] != 3) & (self.df['付款狀態'] == '未付款'))]
+        # 辨別是否為該訂單第一件商品
+        self.df[self.count] = self.df.groupby(self.oc.code).cumcount()
+        # 訂單編號
+        self.df[self.oc.code] = self.df[self.oc.code].str.replace(r'#', '', regex=True)
+        # 郵遞區號取前三碼
+        self.df[self.oc.postCode] = self.df[self.oc.postCode].fillna('').apply(lambda x: x[:3])
+        # 更改訂單成立日期格式
+        self.df[self.oc.date] = self.df[self.oc.date].fillna('').astype(str).apply(lambda x: dt.strptime(x, self.timeFmt).strftime('%Y%m%d'))
+        # 付款方式
+        self.df[self.oc.pay] = self.df[self.oc.pay].str.replace(r'\([^\(|\)]*\)', '', regex=True)
+        # 商品總金額
+        self.df[self.oc.price] = self.df[self.price.sum].sum(axis=1)
+        # shopline商品總金額要減掉運費
+        if self.oc.fr in [ColumnType().shopline]:
+            self.df[self.oc.price] = self.df[self.oc.price] - self.df['運費']
+        if self.oc.fr in [ColumnType().shopee, ColumnType().shopline]:
+            self.df[self.tmp] = self.df[self.price.col] * self.df[self.oc.number]
+            self.df[self.oc.price] = self.df.groupby(self.oc.code)[self.oc.price].transform('first') / self.df.groupby(self.oc.code)[self.tmp].transform(lambda x: x.sum()) * self.df[self.tmp]
+        # shopline運費
+        if self.oc.fr in [ColumnType().shopline]:
+            ship = self.df.loc[self.df['運費'] > 0].copy()
+            ship[self.oc.productCode] = '888888888'
+            ship[self.oc.price] = ship['運費']
+            ship = ship[[self.oc.site, self.oc.code, self.oc.customer, self.oc.postCode, self.oc.address, self.oc.tel, self.oc.cel, self.oc.productCode, self.oc.date, self.oc.price]]
+            self.df = pd.concat([self.df, ship]).sort_values(by=[self.oc.date, self.oc.code])
+        # 合併商品總表中的資訊並計算撿貨費
+        self.df = self.productDetail(self.df)
+        # 撿貨費
+        self.df[self.oc.tally] = self.df['撿貨數量'] * self.df[self.oc.number] * 7.5
+        # 進貨小計
+        self.df[self.oc.purchaseSubtotal] = self.df[self.oc.purchasePrice] * self.df[self.oc.number]
+        # 成交手續費
+        self.df[self.oc.fee] = self.df[self.oc.price] * self.feeRate.pc + self.feeRate.add
+        if self.oc.fr in [ColumnType().yahoo]:
+            # 金流費用
+            self.df.loc[self.df[self.oc.payCode] == 1, self.oc.cashFee] = 0
+            self.df.loc[self.df[self.oc.payCode] == 4, self.oc.cashFee] = self.df[self.oc.price] * 0.02
+            self.df.loc[self.df[self.oc.pay] == '全家繳費', self.oc.cashFee] = 15
+            self.df.loc[self.df[self.oc.pay] == '7-11', self.oc.cashFee] = 48
+            # 訂單金額
+            self.df[self.oc.subtotal] = self.df.groupby(self.oc.code)[self.price.sum].transform(lambda x: x.sum()).sum(axis=1)
+        elif self.oc.fr in [ColumnType().shopee, ColumnType().shopline]:
+            # 訂單金額
+            self.df[self.oc.subtotal] = self.df[self.price.sum].sum(axis=1)
+        # 替換空白電話號碼為'****'
+        self.df.loc[self.df[self.oc.cel].isna(), self.oc.cel] = '****'
+        # 訂單處理費
+        self.df[self.oc.orderFee] = (self.df.groupby(self.oc.code)[self.oc.code].transform("count") - 1) * 10 + 26
+        # 運費
+        self.df = self.multiCondition(self.ship, [self.oc.ship])
+        # shopee隱碼服務費
+        self.df = self.multiCondition(self.serviceFee, [self.oc.serviceFee])
+        # 依倉庫調整撿貨費、訂單處理費、運費
+        self.df.loc[self.df[self.oc.warehouse].fillna('').str.contains(r'^(?:原廠出貨|公司倉)$', regex=True), [self.oc.tally, self.oc.orderFee]] = 0
+        self.df.loc[self.df[self.oc.warehouse] == '原廠出貨', self.oc.ship] = 0
+        # 如果不是第一件商品，則'運費','訂單處理費','隱碼服務費'為0
+        self.df.loc[self.df[self.count] != 0, [self.oc.ship, self.oc.orderFee, self.oc.serviceFee]] = 0
+        # 利潤
+        self.df[self.oc.subtotal] = self.df.groupby(self.oc.code)[self.oc.subtotal].transform('first')
+        self.df[self.oc.profit] = self.df[self.oc.subtotal] - self.df.groupby(self.oc.code)[self.oc.profitCols].transform(lambda x: x.sum()).sum(axis=1)
+        # 利潤百分比
+        self.df[self.oc.profitPc] = (self.df[self.oc.profit] / self.df[self.oc.profitDenominator] * 100).round(2).astype(str) + '%'
+        # 補齊需要的欄位
+        self.df = self.addColumns()
+        # 如果不是第一件商品，則'訂單金額','利潤','利潤百分比'為0
+        self.df.loc[self.df[self.count] != 0, [self.oc.subtotal, self.oc.profit, self.oc.profitPc]] = 0
+        # 價格四捨五入至整數
+        for col in self.oc.roundCols:
+            self.df[col] = self.df[col].fillna(0).round(0)
+        # 匯出需要的欄位
+        self.df = self.addColumns()[self.oc.finCols]
 
     def concatFr(self):
         dfList = []
