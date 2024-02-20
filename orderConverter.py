@@ -322,8 +322,8 @@ def main():
     shopeeFeeRate = 0.135
     if os.path.isfile(f'待轉檔/{SourceFiles().shopee}'):
         inputFeeRate = input('請輸入shopee交易手續費:')
-        shopeeFeeRate = float(inputFeeRate) / 100 if inputFeeRate else shopeeFeeRate
-        logging.info(f'已使用手續費 {shopeeFeeRate*100}% 轉檔')
+        shopeeFeeRate = round(float(inputFeeRate) / 100, 4) if inputFeeRate else shopeeFeeRate
+        logging.info(f'已使用手續費 {round(shopeeFeeRate*100, 2)}% 轉檔')
     shopee = Converter(
         fr=[SourceFiles().shopee],
         cov={'訂單編號': str, '商品選項貨號': str, '收件者電話': str, '取件門市店號': str, '郵遞區號': str, '訂單成立日期': str},
