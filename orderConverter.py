@@ -319,12 +319,17 @@ def main():
         timeFmt='%Y/%m/%d %H:%M',
         fileName='yahoo購物中心'
     )
+    shopeeFeeRate = 0.135
+    if os.path.isfile(f'待轉檔/{SourceFiles().shopee}'):
+        inputFeeRate = input('請輸入shopee交易手續費:')
+        shopeeFeeRate = float(inputFeeRate) / 100 if inputFeeRate else shopeeFeeRate
+        logging.info(f'已使用手續費 {shopeeFeeRate*100}% 轉檔')
     shopee = Converter(
         fr=[SourceFiles().shopee],
         cov={'訂單編號': str, '商品選項貨號': str, '收件者電話': str, '取件門市店號': str, '郵遞區號': str, '訂單成立日期': str},
         oc=OutputColumns(ColumnType().shopee),
         price=Price(['買家總支付金額', '蝦幣折抵', '銀行信用卡活動折抵', '優惠券'], '商品活動價格'),
-        feeRate=FeeRate(0.144),
+        feeRate=FeeRate(shopeeFeeRate),
         timeFmt='%Y-%m-%d %H:%M',
         fileName='shopee'
     )
