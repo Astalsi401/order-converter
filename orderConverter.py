@@ -191,9 +191,13 @@ class Converter:
         self.df[self.oc.pay] = self.df[self.oc.pay].str.replace(r'\([^\(|\)]*\)', '', regex=True)
         # 商品總金額
         self.df[self.oc.price] = self.df[self.price.sum].sum(axis=1)
+        # 替換空白電話號碼為'****'
+        self.df.loc[self.df[self.oc.cel].isna(), self.oc.cel] = '****'
         # shopline商品總金額要減掉運費
         if self.oc.fr in [ColumnType().shopline]:
             self.df[self.oc.price] = self.df[self.oc.price] - self.df['運費']
+        if self.oc.fr in [ColumnType().shopee]:
+            self.df[self.oc.cel] = self.df[self.oc.cel].replace(r'#\d$', '', regex=True)
         if self.oc.fr in [ColumnType().shopee, ColumnType().shopline]:
             self.df[self.tmp] = self.df[self.price.col] * self.df[self.oc.number]
             self.df[self.oc.price] = self.df.groupby(self.oc.code)[self.oc.price].transform('first') / self.df.groupby(self.oc.code)[self.tmp].transform(lambda x: x.sum()) * self.df[self.tmp]
@@ -223,8 +227,6 @@ class Converter:
         elif self.oc.fr in [ColumnType().shopee, ColumnType().shopline]:
             # 訂單金額
             self.df[self.oc.subtotal] = self.df[self.price.sum].sum(axis=1)
-        # 替換空白電話號碼為'****'
-        self.df.loc[self.df[self.oc.cel].isna(), self.oc.cel] = '****'
         # 訂單處理費
         self.df[self.oc.orderFee] = (self.df.groupby(self.oc.code)[self.oc.code].transform("count") - 1) * 10 + 26
         # 運費
