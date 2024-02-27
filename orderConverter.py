@@ -315,7 +315,7 @@ def main():
         cov={'交易序號': str, '訂單編號': str, '店家商品料號': str, '收件人電話(日)': str, '收件人行動電話': str, '收件人郵遞區號': str, '轉單日期': str},
         oc=OutputColumns(ColumnType().yahoo),
         price=Price(['金額小計', '超贈點折抵金額', '行銷補助金額']),
-        feeRate=FeeRate(0.0568, 2),
+        feeRate=FeeRate(0.15, 2),
         timeFmt='%Y/%m/%d %H:%M',
         fileName='yahoo購物中心'
     )
