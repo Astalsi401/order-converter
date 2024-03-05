@@ -3,6 +3,7 @@ import re
 import pandas as pd
 import logging
 from datetime import datetime as dt
+from pickle import load
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 pd.set_option('display.max.columns', None)
@@ -144,16 +145,17 @@ class FeeRate:
 
 
 class Converter:
-    def __init__(self, fr: list, cov: dict, oc: dict, price: Price, feeRate: FeeRate, timeFmt: str, fileName: str) -> None:
+    def __init__(self, fr: list, cov: dict, oc: dict, price: Price, timeFmt: str, fileName: str, feeRate: FeeRate = None) -> None:
         self.tmp = 'tmp'
         self.count = 'count'
         self.fr = fr
         self.oc = oc
         self.cov = cov
         self.price = price
-        self.feeRate = feeRate
         self.timeFmt = timeFmt
         self.fileName = f'{result}/{fileName}.xlsx'
+        settings = load(open(f'設定/settings.pkl', 'rb'))
+        self.feeRate = feeRate if feeRate else FeeRate(settings[fileName]['feeRate']['rate'], settings[fileName]['feeRate']['add'])
         self.payCode = {
             1: [{self.oc.pay: ['銀行轉帳', '蝦皮錢包', '線上支付', 'ATM/銀行轉帳', 'ATM', '全家繳費']}],
             3: [{self.oc.pay: ['貨到付款', '現付']}],
@@ -306,7 +308,6 @@ def main():
         cov={'交易序號': str, '訂單編號': str, '商品編號': str, '收件人電話(日)': str, '收件人行動電話': str, '收件人電話': str, '收件人郵遞區號': str, '轉單日期': str},
         oc=OutputColumns(ColumnType().yahoo),
         price=Price(['金額小計', '超贈點折抵金額', '行銷補助金額']),
-        feeRate=FeeRate(0.0568, 2),
         timeFmt='%Y/%m/%d %H:%M',
         fileName='yahoo商城'
     )
@@ -315,21 +316,14 @@ def main():
         cov={'交易序號': str, '訂單編號': str, '店家商品料號': str, '收件人電話(日)': str, '收件人行動電話': str, '收件人郵遞區號': str, '轉單日期': str},
         oc=OutputColumns(ColumnType().yahoo),
         price=Price(['金額小計', '超贈點折抵金額', '行銷補助金額']),
-        feeRate=FeeRate(0.15, 2),
         timeFmt='%Y/%m/%d %H:%M',
         fileName='yahoo購物中心'
     )
-    shopeeFeeRate = 0.135
-    if os.path.isfile(f'待轉檔/{SourceFiles().shopee}'):
-        inputFeeRate = input('請輸入shopee交易手續費:')
-        shopeeFeeRate = round(float(inputFeeRate) / 100, 4) if inputFeeRate else shopeeFeeRate
-        logging.info(f'已使用手續費 {round(shopeeFeeRate*100, 2)}% 轉檔')
     shopee = Converter(
         fr=[SourceFiles().shopee],
         cov={'訂單編號': str, '商品選項貨號': str, '收件者電話': str, '取件門市店號': str, '郵遞區號': str, '訂單成立日期': str},
         oc=OutputColumns(ColumnType().shopee),
         price=Price(['買家總支付金額', '蝦幣折抵', '銀行信用卡活動折抵', '優惠券'], '商品活動價格'),
-        feeRate=FeeRate(shopeeFeeRate),
         timeFmt='%Y-%m-%d %H:%M',
         fileName='shopee'
     )
@@ -338,7 +332,6 @@ def main():
         cov={'訂單號碼': str, '郵政編號（如適用)': str, '電話號碼': str, '收件人電話號碼': str, '訂單成立日期': str, '商品貨號': str, '全家服務編號 / 7-11 店號': str},
         oc=OutputColumns(ColumnType().shopline),
         price=Price(['付款總金額'], '商品結帳價'),
-        feeRate=FeeRate(0.028),
         timeFmt='%Y-%m-%d %H:%M:%S',
         fileName='shopline'
     )
