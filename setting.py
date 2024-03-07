@@ -9,17 +9,22 @@ feeRate = 'feeRate'
 rate = 'rate'
 add = 'add'
 setting_pkl = '設定/settings.pkl'
+settings_default = {
+    'yahoo商城': {'feeRate': {'rate': 0.0568, 'add': 2}},
+    'yahoo購物中心': {'feeRate': {'rate': 0.15, 'add': 2}},
+    'shopee': {'feeRate': {'rate': 0.135, 'add': 0}},
+    'shopline': {'feeRate': {'rate': 0.028, 'add': 0}},
+    'rakuten': {'feeRate': {'rate': 0, 'add': 0}}
+}
+# dump(settings_default, open(setting_pkl, 'wb'))
 
 
 class GUI:
     def __init__(self, root):
-        self.settings = load(open(setting_pkl, 'rb')) if os.path.exists(setting_pkl) else {
-            'yahoo商城': {'feeRate': {'rate': 0.0568, 'add': 2}},
-            'yahoo購物中心': {'feeRate': {'rate': 0.15, 'add': 2}},
-            'shopee': {'feeRate': {'rate': 0.135, 'add': 0}},
-            'shopline': {'feeRate': {'rate': 0.028, 'add': 0}},
-            'rakuten': {'feeRate': {'rate': 0, 'add': 0}}
-        }
+        # 如果有設定檔則讀取
+        self.settings = load(open(setting_pkl, 'rb')) if os.path.exists(setting_pkl) else settings_default
+        # 如果更新後sources數量增加則新增預設數值
+        self.settings = {**settings_default, **self.settings}
         self.sources = list(self.settings.keys())
         self.root = root
         self.root.geometry('500x400')
