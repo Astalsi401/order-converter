@@ -224,7 +224,7 @@ class Converter:
         # 替換空白電話號碼為'****'
         self.df.loc[self.df[self.oc.cel].isna(), self.oc.cel] = '****'
         # 如果在後續金額計算中需要把商品價格*購買數量
-        if self.price:
+        if self.price.col:
             self.df[self.tmp] = self.df[self.price.col] * self.df[self.oc.number]
         # shopline商品總金額要減掉運費
         if self.oc.fr in [ColumnType().shopline]:
