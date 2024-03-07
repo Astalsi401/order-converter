@@ -17,9 +17,10 @@ class GUI:
             'yahoo商城': {'feeRate': {'rate': 0.0568, 'add': 2}},
             'yahoo購物中心': {'feeRate': {'rate': 0.15, 'add': 2}},
             'shopee': {'feeRate': {'rate': 0.135, 'add': 0}},
-            'shopline': {'feeRate': {'rate': 0.028, 'add': 0}}
+            'shopline': {'feeRate': {'rate': 0.028, 'add': 0}},
+            'rakuten': {'feeRate': {'rate': 0, 'add': 0}}
         }
-        self.sources = ['yahoo商城', 'yahoo購物中心', 'shopee', 'shopline']
+        self.sources = list(self.settings.keys())
         self.root = root
         self.root.geometry('500x400')
         self.root.title('轉檔設定')

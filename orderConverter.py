@@ -30,6 +30,7 @@ class SourceFiles:
         self.yahoo_shop_s = 'yahoo商城店配.xlsx'
         self.shopee = 'shopee店配宅配.xlsx'
         self.shopline = 'shopline店配宅配.xlsx'
+        self.rakuten = 'rakuten店配宅配.xlsx'
 
 
 class ColumnType:
@@ -37,6 +38,7 @@ class ColumnType:
         self.yahoo = 'yahoo'
         self.shopee = 'shopee'
         self.shopline = 'shopline'
+        self.rakuten = 'rakuten'
 
 
 class OutputColumns:
@@ -70,6 +72,8 @@ class OutputColumns:
         self.pm = '負責PM'
         self.note = '備註'
         self.serviceFee = '隱碼服務費'
+        self.send = '寄送方式'
+        self.priceImport = '待定'
         if self.fr == ColumnType().yahoo:
             self.cashFee = '金流費用'
             self.fee = '成交手續費\n(含購物車費用)'
@@ -90,11 +94,11 @@ class OutputColumns:
                 '交易序號': self.tradeCode
             }
         elif self.fr == ColumnType().shopee:
-            self.dicount = '蝦幣回饋券'
+            self.discount = '蝦幣回饋券'
             self.fee = '交易手續費12%\n(成交、活動、金流)'
             self.profitDenominator = self.subtotal
-            self.profitCols = [self.purchaseSubtotal, self.fee, self.dicount, self.tally, self.orderFee, self.ship]
-            self.finCols = [self.code, self.site, self.customer, self.postCode, self.address, self.tel, self.cel, self.date, self.productCode, self.product, self.number, self.price, self.payCode, self.pay, self.manufacture, self.purchasePrice, self.purchaseSubtotal, self.warehouse, self.tradeCode, self.subtotal, self.fee, self.dicount, self.serviceFee, self.tally, self.orderFee, self.ship, self.profit, self.profitPc, self.pm, self.note]
+            self.profitCols = [self.purchaseSubtotal, self.fee, self.discount, self.tally, self.orderFee, self.ship]
+            self.finCols = [self.code, self.site, self.customer, self.postCode, self.address, self.tel, self.cel, self.date, self.productCode, self.product, self.number, self.price, self.payCode, self.pay, self.manufacture, self.purchasePrice, self.purchaseSubtotal, self.warehouse, self.tradeCode, self.subtotal, self.fee, self.discount, self.serviceFee, self.tally, self.orderFee, self.ship, self.profit, self.profitPc, self.pm, self.note]
             self.rename = {
                 '訂單編號': self.code,
                 '收件者姓名': self.customer,
@@ -105,7 +109,7 @@ class OutputColumns:
                 '商品選項貨號': self.productCode,
                 '數量': self.number,
                 '付款方式': self.pay,
-                '賣家蝦幣回饋券': self.dicount
+                '賣家蝦幣回饋券': self.discount
             }
         elif self.fr == ColumnType().shopline:
             self.fee = '交易手續費2.8%\n(成交、金流)'
@@ -115,6 +119,7 @@ class OutputColumns:
             self.coupon = '折抵購物金'
             self.reward = '點數折現'
             self.profitCols = [self.purchaseSubtotal, self.fee, self.tally, self.orderFee, self.ship]
+            self.shipCols = [self.site, self.code, self.customer, self.postCode, self.address, self.tel, self.cel, self.productCode, self.date, self.price]
             self.finCols = [self.code, self.site, self.customer, self.postCode, self.address, self.tel, self.cel, self.date, self.productCode, self.product, self.number, self.price, self.discount, self.customDiscount, self.coupon, self.reward, self.payCode, self.pay, self.manufacture, self.purchasePrice, self.purchaseSubtotal, self.warehouse, self.tradeCode, self.subtotal, self.fee, self.tally, self.orderFee, self.ship, self.profit, self.profitPc, self.pm, self.note]
             self.rename = {
                 '訂單號碼': self.code,
@@ -127,13 +132,36 @@ class OutputColumns:
                 '商品貨號': self.productCode,
                 '數量': self.number,
                 '付款方式': self.pay,
+                '送貨方式': self.send
+            }
+        elif self.fr == ColumnType().rakuten:
+            self.priceImport = '匯入輔翼金額'
+            self.discount = '店家優惠券'
+            self.fee = '手續費'  # 目前未使用
+            self.profitDenominator = self.subtotal
+            self.profitCols = [self.ship]
+            self.shipCols = [self.date, self.code, self.customer, self.cel, self.postCode, self.address, self.productCode, self.product, self.number, self.price, self.payCode, self.pay, self.discount]
+            self.finCols = [self.date, self.code, self.customer, self.cel, self.postCode, self.address, self.productCode, self.product, self.number, self.price, self.ship, self.priceImport, self.payCode, self.pay, self.discount]
+            self.rename = {
+                '訂單日期': self.date,
+                '訂單號碼': self.code,
+                '收件人姓名': self.customer,
+                '收件人的電話號碼': self.cel,
+                '目的地郵遞區號': self.postCode,
+                '配送地址': self.address,
+                '商品管理編號 (SKU)': self.productCode,
+                '商品名稱': self.product,
+                '購買數量': self.number,
+                '商品價格': self.price,
+                '配送方式': self.send,
+                '訂單與運費總和': self.subtotal
             }
         # 需四捨五入的欄位
-        self.roundCols = [self.price, self.purchasePrice, self.purchaseSubtotal, self.fee, self.subtotal, self.profit]
+        self.roundCols = [self.price, self.purchasePrice, self.purchaseSubtotal, self.fee, self.subtotal, self.profit, self.priceImport]
 
 
 class Price:
-    def __init__(self, sum: list, col='') -> None:
+    def __init__(self, sum: list, col: str = None) -> None:
         self.sum = sum
         self.col = col
 
@@ -158,17 +186,17 @@ class Converter:
         self.feeRate = feeRate if feeRate else FeeRate(settings[fileName]['feeRate']['rate'], settings[fileName]['feeRate']['add'])
         self.payCode = {
             1: [{self.oc.pay: ['銀行轉帳', '蝦皮錢包', '線上支付', 'ATM/銀行轉帳', 'ATM', '全家繳費']}],
-            3: [{self.oc.pay: ['貨到付款', '現付']}],
+            3: [{self.oc.pay: ['貨到付款', '現付', '7-11門市取貨付款']}],
             4: [{self.oc.pay: ['信用卡', '信用卡分期付款', 'LINE Pay', '信用卡付款', '信用卡一次', '分期付款', '街口支付']}],
-            6: [{self.oc.pay: ['7-11']}, {'寄送方式': ['7-ELEVEN'], self.oc.pay: ['貨到付款']}, {'送貨方式': ['7-11 取貨 (到店付款)', '全家取貨 (到店付款)'], self.oc.pay: ['貨到付款', '貨到付款']}],
+            6: [{self.oc.pay: ['7-11']}, {self.oc.send: ['7-ELEVEN'], self.oc.pay: ['貨到付款']}, {self.oc.send: ['7-11 取貨 (到店付款)', '全家取貨 (到店付款)'], self.oc.pay: ['貨到付款', '貨到付款']}],
         }
         self.ship = {
-            75: [{self.oc.site: ['yahoo商城店配']}, {'寄送方式': ['7-ELEVEN']}, {'送貨方式': ['7-11 取貨 (到店付款)', '全家取貨 (到店付款)']}],
-            140: [{self.oc.site: ['yahoo商城宅配', 'yahoo購物中心宅配']}, {'寄送方式': ['賣家宅配']}, {'送貨方式': ['宅配']}],
+            75: [{self.oc.site: ['yahoo商城店配']}, {self.oc.send: ['7-ELEVEN', '7-11 取貨 (到店付款)', '全家取貨 (到店付款)']}],
+            140: [{self.oc.site: ['yahoo商城宅配', 'yahoo購物中心宅配']}, {self.oc.send: ['賣家宅配', '宅配']}],
         }
         self.serviceFee = {
-            0: [{self.oc.site: ['yahoo商城店配']}, {'寄送方式': ['7-ELEVEN']}, {'送貨方式': ['7-11 取貨 (到店付款)', '全家取貨 (到店付款)']}],
-            10: [{self.oc.site: ['yahoo商城宅配', 'yahoo購物中心宅配']}, {'寄送方式': ['賣家宅配']}, {'送貨方式': ['宅配']}],
+            0: [{self.oc.site: ['yahoo商城店配']}, {self.oc.send: ['7-ELEVEN', '7-11 取貨 (到店付款)', '全家取貨 (到店付款)']}],
+            10: [{self.oc.site: ['yahoo商城宅配', 'yahoo購物中心宅配']}, {self.oc.send: ['賣家宅配', '宅配']}],
         }
         # 如有複數來源檔案須將檔案合併
         self.df = self.concatFr()
@@ -195,20 +223,26 @@ class Converter:
         self.df[self.oc.price] = self.df[self.price.sum].sum(axis=1)
         # 替換空白電話號碼為'****'
         self.df.loc[self.df[self.oc.cel].isna(), self.oc.cel] = '****'
+        # 如果在後續金額計算中需要把商品價格*購買數量
+        if self.price:
+            self.df[self.tmp] = self.df[self.price.col] * self.df[self.oc.number]
         # shopline商品總金額要減掉運費
         if self.oc.fr in [ColumnType().shopline]:
             self.df[self.oc.price] = self.df[self.oc.price] - self.df['運費']
         if self.oc.fr in [ColumnType().shopee]:
             self.df[self.oc.cel] = self.df[self.oc.cel].replace(r'#\d$', '', regex=True)
         if self.oc.fr in [ColumnType().shopee, ColumnType().shopline]:
-            self.df[self.tmp] = self.df[self.price.col] * self.df[self.oc.number]
             self.df[self.oc.price] = self.df.groupby(self.oc.code)[self.oc.price].transform('first') / self.df.groupby(self.oc.code)[self.tmp].transform(lambda x: x.sum()) * self.df[self.tmp]
-        # shopline運費
-        if self.oc.fr in [ColumnType().shopline]:
+        # rakuten 匯入輔翼金額，不確定未來是否要整合至訂單金額
+        if self.oc.fr in [ColumnType().rakuten]:
+            self.df[self.tmp] = self.df.groupby(self.oc.code)[self.price.sum].transform(lambda x: x.sum()).sum(axis=1)
+            self.df[self.oc.priceImport] = (self.df[self.tmp] - self.df[self.oc.discount]) / self.df[self.tmp] * self.df[self.oc.price] * self.df[self.oc.number]
+        # shopline, rakuten運費
+        if self.oc.fr in [ColumnType().shopline, ColumnType().rakuten]:
             ship = self.df.loc[self.df['運費'] > 0].copy()
             ship[self.oc.productCode] = '888888888'
             ship[self.oc.price] = ship['運費']
-            ship = ship[[self.oc.site, self.oc.code, self.oc.customer, self.oc.postCode, self.oc.address, self.oc.tel, self.oc.cel, self.oc.productCode, self.oc.date, self.oc.price]]
+            ship = ship[self.oc.shipCols]
             self.df = pd.concat([self.df, ship]).sort_values(by=[self.oc.date, self.oc.code])
         # 合併商品總表中的資訊並計算撿貨費
         self.df = self.productDetail(self.df)
@@ -251,7 +285,8 @@ class Converter:
         self.df.loc[self.df[self.count] != 0, [self.oc.subtotal, self.oc.profit, self.oc.profitPc]] = 0
         # 價格四捨五入至整數
         for col in self.oc.roundCols:
-            self.df[col] = self.df[col].fillna(0).round(0)
+            if col in self.df.columns:
+                self.df[col] = self.df[col].fillna(0).round(0)
         # 匯出需要的欄位
         self.df = self.addColumns()[self.oc.finCols]
 
@@ -335,7 +370,15 @@ def main():
         timeFmt='%Y-%m-%d %H:%M:%S',
         fileName='shopline'
     )
-    for cov in [shopee, shopline, yahoo_mall, yahoo_shop]:
+    rakuten = Converter(
+        fr=[SourceFiles().rakuten],
+        cov={'訂單日期': str, '訂單號碼': str, '收件人的電話號碼': str, '目的地郵遞區號': str, '商品管理編號 (SKU)': str},
+        oc=OutputColumns(ColumnType().rakuten),
+        price=Price(['商品總金額'], '商品總金額'),
+        timeFmt='%Y-%m-%d %H:%M:%S',
+        fileName='rakuten'
+    )
+    for cov in [shopee, shopline, yahoo_mall, yahoo_shop, rakuten]:
         if not cov.df.empty:
             cov.to_excel()
 
