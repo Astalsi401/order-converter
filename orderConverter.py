@@ -235,6 +235,7 @@ class Converter:
             self.df[self.oc.price] = self.df.groupby(self.oc.code)[self.oc.price].transform('first') / self.df.groupby(self.oc.code)[self.tmp].transform(lambda x: x.sum()) * self.df[self.tmp]
         # rakuten 匯入輔翼金額，不確定未來是否要整合至訂單金額
         if self.oc.fr in [ColumnType().rakuten]:
+            self.df[self.oc.discount] = self.df[self.oc.discount].fillna(0)
             self.df[self.tmp] = self.df.groupby(self.oc.code)[self.price.sum].transform(lambda x: x.sum()).sum(axis=1)
             self.df[self.oc.priceImport] = (self.df[self.tmp] - self.df[self.oc.discount]) / self.df[self.tmp] * self.df[self.oc.price] * self.df[self.oc.number]
         # shopline, rakuten運費
