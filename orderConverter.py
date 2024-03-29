@@ -25,12 +25,12 @@ def getFilesName(path, ext=None):
 
 class SourceFiles:
     def __init__(self) -> None:
-        self.yahoo_mall = 'yahoo購物中心宅配.xlsx'
+        self.yahoo_mall = 'yahoo購物中心宅配(管制明文).xlsx'
         self.yahoo_shop_h = 'yahoo商城宅配.xlsx'
         self.yahoo_shop_s = 'yahoo商城店配.xlsx'
-        self.shopee = 'shopee店配宅配.xlsx'
-        self.shopline = 'shopline店配宅配.xlsx'
-        self.rakuten = 'rakuten店配宅配.xlsx'
+        self.shopee = 'shopee店配宅配(管制明文).xlsx'
+        self.shopline = 'shopline店配宅配(管制明文).xlsx'
+        self.rakuten = 'rakuten店配宅配(管制明文).xlsx'
 
 
 class ColumnType:
