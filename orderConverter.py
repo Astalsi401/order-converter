@@ -30,7 +30,7 @@ class SourceFiles:
         self.yahoo_shop_s = 'yahoo商城店配.xlsx'
         self.shopee = 'shopee店配宅配(管制明文).xlsx'
         self.shopline = 'shopline店配宅配(管制明文).xlsx'
-        self.rakuten = 'Rakuten樂天店配宅配(管制明文).xlsx'
+        self.rakuten = 'rakuten店配宅配(管制明文).xlsx'
 
 
 class ColumnType:
@@ -152,7 +152,7 @@ class OutputColumns:
                 '商品管理編號 (SKU)': self.productCode,
                 '商品名稱': self.product,
                 '購買數量': self.number,
-                '應付金額': self.price,
+                '商品價格': self.price,
                 '配送方式': self.send,
                 '訂單與運費總和': self.subtotal
             }
@@ -235,8 +235,8 @@ class Converter:
             self.df[self.oc.price] = self.df.groupby(self.oc.code)[self.oc.price].transform('first') / self.df.groupby(self.oc.code)[self.tmp].transform(lambda x: x.sum()) * self.df[self.tmp]
         # rakuten 匯入輔翼金額，不確定未來是否要整合至訂單金額
         if self.oc.fr in [ColumnType().rakuten]:
-            self.df[self.tmp] = self.df.groupby(self.oc.code)[self.price.sum].transform(lambda x: x.sum()).sum(axis=1)
-            self.df[self.oc.priceImport] = self.df[self.tmp] / self.df[self.tmp] * self.df[self.oc.price] * self.df[self.oc.number]
+            self.df[self.tmp] = self.df.groupby(self.oc.code)[[self.tmp]].transform(lambda x: x.sum()).sum(axis=1)
+            self.df[self.oc.priceImport] = (1 - (self.df[self.oc.discount] / self.df[self.tmp])) * self.df[self.oc.price] * self.df[self.oc.number]
         # shopline, rakuten運費
         if self.oc.fr in [ColumnType().shopline, ColumnType().rakuten]:
             ship = self.df.loc[self.df['運費'] > 0].copy()
