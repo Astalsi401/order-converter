@@ -2,6 +2,8 @@ import os
 import re
 import pandas as pd
 import logging
+from io import BytesIO
+from msoffcrypto import OfficeFile
 from datetime import datetime as dt
 from pickle import load
 
@@ -10,9 +12,25 @@ pd.set_option('display.max.columns', None)
 result = 'import'
 
 
-def readXlsx(path, converters: dict):
+def getPassword(setting_key: str):
+    setting_pkl = '設定/settings.pkl'
+    if not os.path.exists(setting_pkl):
+        raise FileNotFoundError('請先執行setting.py，並儲存預設設定檔')
+    password = load(open(setting_pkl, 'rb'))[setting_key]['password']
+    try:
+        return None if password == '' else password
+    except KeyError:
+        raise KeyError('請先執行setting.py，並設定檔案密碼')
+
+
+def readXlsx(path, converters: dict, password=None):
     '''讀取excel，若檔案不存在則回傳空dataframe'''
-    return pd.read_excel(path, converters=converters) if os.path.isfile(path) else pd.DataFrame()
+    if password:
+        data = BytesIO()
+        office_file = OfficeFile(open(path, 'rb'))
+        office_file.load_key(password=password)
+        office_file.decrypt(data)
+    return pd.read_excel(data if password else path, converters=converters) if os.path.isfile(path) else pd.DataFrame()
 
 
 def getFilesName(path, ext=None):
@@ -21,13 +39,18 @@ def getFilesName(path, ext=None):
 
 
 class SourceFiles:
+    class Source:
+        def __init__(self, file: str, setting: str) -> None:
+            self.file = file
+            self.setting = setting
+
     def __init__(self) -> None:
-        self.yahoo_mall = 'yahoo購物中心宅配(管制明文).xlsx'
-        self.yahoo_shop_h = 'yahoo商城宅配.xlsx'
-        self.yahoo_shop_s = 'yahoo商城店配.xlsx'
-        self.shopee = 'shopee店配宅配(管制明文).xlsx'
-        self.shopline = 'shopline店配宅配(管制明文).xlsx'
-        self.rakuten = 'rakuten店配宅配(管制明文).xlsx'
+        self.yahoo_mall = self.Source('yahoo購物中心宅配(管制明文).xlsx', 'yahoo購物中心')
+        self.yahoo_shop_h = self.Source('yahoo商城宅配.xlsx', 'yahoo商城')
+        self.yahoo_shop_s = self.Source('yahoo商城店配.xlsx', 'yahoo商城')
+        self.shopee = self.Source('shopee店配宅配(管制明文).xlsx', 'shopee')
+        self.rakuten = self.Source('rakuten店配宅配(管制明文).xlsx', 'rakuten')
+        self.shopline = self.Source('shopline店配宅配(管制明文).xlsx', 'shopline')
 
 
 class ColumnType:
@@ -199,7 +222,7 @@ class Converter:
         self.df = self.concatFr()
         if self.df.empty:
             return None
-        logging.info(f'正在轉檔：{self.fr}')
+        logging.info(f'正在轉檔：{'、'.join([f.file for f in self.fr])}')
         # 付款代號
         self.df = self.multiCondition(self.payCode, [self.oc.payCode])
         # 刪除shopline已取消\非貨到付款且未付款的訂單
@@ -290,9 +313,9 @@ class Converter:
     def concatFr(self):
         dfList = []
         for file in self.fr:
-            df = readXlsx(f'待轉檔/{file}', converters=self.cov)
-            df[self.oc.site] = re.sub(r'(.xlsx)$', '', file)
-            if file == SourceFiles().yahoo_shop_s and not df.empty:
+            df = readXlsx(f'待轉檔/{file.file}', converters=self.cov, password=getPassword(file.setting))
+            df[self.oc.site] = re.sub(r'(.xlsx)$', '', file.file)
+            if file.file == SourceFiles().yahoo_shop_s.file and not df.empty:
                 df = df.rename(columns={'收件人電話': '收件人電話(日)', '轉單日': '轉單日期'})
                 df['收件人地址'] = df['超商類型'] + df['收件人地址']
                 df['付款別'] = df['超商類型']
@@ -375,9 +398,7 @@ def main():
         timeFmt='%Y-%m-%d %H:%M:%S',
         fileName='rakuten'
     )
-    for cov in [shopee, shopline, yahoo_mall, yahoo_shop, rakuten]:
-        if not cov.df.empty:
-            cov.to_excel()
+    [cov.to_excel() for cov in [shopee, shopline, yahoo_mall, yahoo_shop, rakuten] if not cov.df.empty]
 
 
 if __name__ == '__main__':

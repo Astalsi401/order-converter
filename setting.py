@@ -8,13 +8,14 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 feeRate = 'feeRate'
 rate = 'rate'
 add = 'add'
+password = 'password'
 setting_pkl = '設定/settings.pkl'
 settings_default = {
-    'yahoo商城': {'feeRate': {'rate': 0.0568, 'add': 2}},
-    'yahoo購物中心': {'feeRate': {'rate': 0.15, 'add': 2}},
-    'shopee': {'feeRate': {'rate': 0.135, 'add': 0}},
-    'shopline': {'feeRate': {'rate': 0.028, 'add': 0}},
-    'rakuten': {'feeRate': {'rate': 0, 'add': 0}}
+    'yahoo商城': {'feeRate': {'rate': 0.0568, 'add': 2}, 'password': ''},
+    'yahoo購物中心': {'feeRate': {'rate': 0.15, 'add': 2}, 'password': ''},
+    'shopee': {'feeRate': {'rate': 0.135, 'add': 0}, 'password': ''},
+    'shopline': {'feeRate': {'rate': 0.028, 'add': 0}, 'password': ''},
+    'rakuten': {'feeRate': {'rate': 0, 'add': 0}, 'password': ''}
 }
 # dump(settings_default, open(setting_pkl, 'wb'))
 
@@ -24,7 +25,7 @@ class GUI:
         # 如果有設定檔則讀取
         self.settings = load(open(setting_pkl, 'rb')) if os.path.exists(setting_pkl) else settings_default
         # 如果更新後sources數量增加則新增預設數值
-        self.settings = {**settings_default, **self.settings}
+        self.settings = {k: {**v, **self.settings[k]} for k, v in settings_default.items()}
         self.sources = list(self.settings.keys())
         self.root = root
         self.root.geometry('500x400')
@@ -52,23 +53,30 @@ class GUI:
         tk.Label(self.root, font=self.font, text='+').grid(row=1, column=4, pady=3)
         tk.Entry(self.root, font=self.font, textvariable=self.feeRateAdd, width=10).grid(row=1, column=5, pady=3)
 
-        tk.Button(self.root, font=self.font, text='儲存並關閉', command=self.save).grid(row=2, column=0, columnspan=6, pady=3)
+        self.filePassword = tk.StringVar(value=self.settings[self.source_files_value.get()][password])
+        tk.Label(self.root, font=self.font, text='密碼:', justify=tk.LEFT).grid(row=2, column=0, sticky=tk.W)
+        tk.Entry(self.root, font=self.font, textvariable=self.filePassword, width=10).grid(row=2, column=1, pady=3)
+
+        tk.Button(self.root, font=self.font, text='儲存並關閉', command=self.save).grid(row=3, column=0, columnspan=6, pady=3)
         self.source_files_value.trace_add('write', self.switch_source)
 
     def save(self):
         self.settings.update({self.source_files_value.get(): {
-            feeRate: {rate: float(self.feeRateRatio.get()), add: float(self.feeRateAdd.get())}
+            feeRate: {rate: float(self.feeRateRatio.get()), add: float(self.feeRateAdd.get())},
+            password: self.filePassword.get()
         }})
         dump(self.settings, open(setting_pkl, 'wb'))
         self.root.destroy()
 
     def switch_source(self, *e):
         self.settings.update({self.source_prev: {
-            feeRate: {rate: float(self.feeRateRatio.get()), add: float(self.feeRateAdd.get())}
+            feeRate: {rate: float(self.feeRateRatio.get()), add: float(self.feeRateAdd.get())},
+            password: self.filePassword.get()
         }})
         self.source_prev = self.source_files_value.get()
         self.feeRateRatio.set(self.settings[self.source_files_value.get()][feeRate][rate])
         self.feeRateAdd.set(self.settings[self.source_files_value.get()][feeRate][add])
+        self.filePassword.set(self.settings[self.source_files_value.get()][password])
 
 
 def main():
