@@ -3,7 +3,7 @@ import re
 import pandas as pd
 import logging
 from io import BytesIO
-from msoffcrypto import OfficeFile
+from msoffcrypto import OfficeFile, exceptions
 from datetime import datetime as dt
 from pickle import load
 
@@ -25,12 +25,22 @@ def getPassword(setting_key: str):
 
 def readXlsx(path, converters: dict, password=None):
     '''讀取excel，若檔案不存在則回傳空dataframe'''
+    if not os.path.isfile(path):
+        return pd.DataFrame()
     if password:
-        data = BytesIO()
-        office_file = OfficeFile(open(path, 'rb'))
-        office_file.load_key(password=password)
-        office_file.decrypt(data)
-    return pd.read_excel(data if password else path, converters=converters) if os.path.isfile(path) else pd.DataFrame()
+        try:
+            data = BytesIO()
+            office_file = OfficeFile(open(path, 'rb'))
+            office_file.load_key(password=password)
+            office_file.decrypt(data)
+        except exceptions.DecryptionError as e:
+            if str(e) == 'Unencrypted document':
+                logging.error(f'{path} 不需要密碼')
+                password = None
+                pass
+            else:
+                logging.error(f'{path} 解密失敗')
+    return pd.read_excel(data if password else path, converters=converters)
 
 
 def getFilesName(path, ext=None):
