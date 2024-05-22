@@ -17,10 +17,7 @@ def readXlsx(path, converters: dict):
 
 def getFilesName(path, ext=None):
     '''抓取資料夾內檔案名稱, ext指定副檔名'''
-    if ext == None:
-        return [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
-    else:
-        return [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f)) and f'.{ext}' in f]
+    return [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))] if ext == None else [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f)) and f'.{ext}' in f]
 
 
 class SourceFiles:
@@ -356,7 +353,7 @@ def main():
     )
     shopee = Converter(
         fr=[SourceFiles().shopee],
-        cov={'訂單編號': str, '商品選項貨號': str, '收件者電話': str, '取件門市店號': str, '郵遞區號': str, '訂單成立日期': str},
+        cov={'訂單編號': str, '商品選項貨號': str, '收件者電話': str, '取件門市店號': str, '郵遞區號': str, '訂單成立日期': str, '蝦皮專線和包裹查詢碼 \n(請複製下方完整編號提供給您配合的物流商當做聯絡電話)': str},
         oc=OutputColumns(ColumnType().shopee),
         price=Price(['買家總支付金額', '蝦幣折抵', '銀行信用卡活動折抵', '優惠券'], '商品活動價格'),
         timeFmt='%Y-%m-%d %H:%M',
