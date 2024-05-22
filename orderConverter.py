@@ -35,7 +35,7 @@ def readXlsx(path, converters: dict, password=None):
             office_file.decrypt(data)
         except exceptions.DecryptionError as e:
             if str(e) == 'Unencrypted document':
-                logging.error(f'{path} 不需要密碼')
+                logging.warning(f'{path} 不需要密碼')
                 password = None
                 pass
             else:
