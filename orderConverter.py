@@ -263,6 +263,8 @@ class Converter:
             self.df[self.oc.cel] = self.df[self.oc.cel].replace(r'#\d$', '', regex=True)
         if self.oc.fr in [ColumnType().shopee, ColumnType().shopline]:
             self.df[self.oc.price] = self.df.groupby(self.oc.code)[self.oc.price].transform('first') / self.df.groupby(self.oc.code)[self.tmp].transform(lambda x: x.sum()) * self.df[self.tmp]
+        # 商品折扣補0
+        self.df[self.oc.discount] = self.df[self.oc.discount].fillna(0)
         # rakuten 匯入輔翼金額，不確定未來是否要整合至訂單金額
         if self.oc.fr in [ColumnType().rakuten]:
             self.df[self.tmp] = self.df.groupby(self.oc.code)[[self.tmp]].transform(lambda x: x.sum()).sum(axis=1)
