@@ -105,6 +105,7 @@ class OutputColumns:
         self.send = '寄送方式'
         self.priceImport = '待定'
         if self.fr == ColumnType().yahoo:
+            self.discount = '超贈點點數'
             self.cashFee = '金流費用'
             self.fee = '成交手續費\n(含購物車費用)'
             self.profitDenominator = self.subtotal
