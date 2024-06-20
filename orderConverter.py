@@ -16,8 +16,8 @@ def get_password(setting_key: str) -> str:
     setting_pkl = '設定/settings.pkl'
     if not os.path.exists(setting_pkl):
         raise FileNotFoundError('請先執行setting.py，並儲存預設設定檔')
-    password = load(open(setting_pkl, 'rb'))[setting_key]['password']
     try:
+        password = load(open(setting_pkl, 'rb'))[setting_key]['password']
         return None if password == '' else password
     except KeyError:
         raise KeyError('請先執行setting.py，並設定檔案密碼')
