@@ -203,7 +203,7 @@ class FeeRate:
 
 
 class Converter:
-    def __init__(self, fr: list[SourceFiles.Source], cov: dict, oc: dict, price: Price, time_fmt: str, file_name: str, feeRate: FeeRate = None) -> None:
+    def __init__(self, fr: list[SourceFiles.Source], cov: dict, oc: OutputColumns, price: Price, time_fmt: str, file_name: str, feeRate: FeeRate = None) -> None:
         self.tmp = 'tmp'
         self.count = 'count'
         self.fr = fr
@@ -222,11 +222,11 @@ class Converter:
         }
         self.ship = {
             75: [{self.oc.site: ['yahoo商城店配']}, {self.oc.send: ['7-ELEVEN', '7-11 取貨 (到店付款)', '全家取貨 (到店付款)']}],
-            140: [{self.oc.site: ['yahoo商城宅配', 'yahoo購物中心宅配']}, {self.oc.send: ['賣家宅配', '宅配']}],
+            140: [{self.oc.site: ['yahoo商城宅配', 'yahoo購物中心宅配(管制明文)']}, {self.oc.send: ['賣家宅配', '宅配']}],
         }
         self.service_fee = {
             0: [{self.oc.site: ['yahoo商城店配']}, {self.oc.send: ['7-ELEVEN', '7-11 取貨 (到店付款)', '全家取貨 (到店付款)']}],
-            10: [{self.oc.site: ['yahoo商城宅配', 'yahoo購物中心宅配']}, {self.oc.send: ['賣家宅配', '宅配']}],
+            10: [{self.oc.site: ['yahoo商城宅配', 'yahoo購物中心宅配(管制明文)']}, {self.oc.send: ['賣家宅配', '宅配']}],
         }
         # 如有複數來源檔案須將檔案合併
         self.df = self.concat_fr()
