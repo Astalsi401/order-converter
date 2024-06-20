@@ -52,6 +52,7 @@ class SourceFiles:
         def __init__(self, file: str, setting: str) -> None:
             self.file = file
             self.setting = setting
+            self.site = self.file.replace('.xlsx', '')
 
     def __init__(self) -> None:
         self.yahoo_mall = self.Source('yahoo購物中心宅配(管制明文).xlsx', 'yahoo購物中心')
@@ -221,12 +222,12 @@ class Converter:
             6: [{self.oc.pay: ['7-11']}, {self.oc.send: ['7-ELEVEN'], self.oc.pay: ['貨到付款']}, {self.oc.send: ['7-11 取貨 (到店付款)', '全家取貨 (到店付款)'], self.oc.pay: ['貨到付款', '貨到付款']}],
         }
         self.ship = {
-            75: [{self.oc.site: ['yahoo商城店配']}, {self.oc.send: ['7-ELEVEN', '7-11 取貨 (到店付款)', '全家取貨 (到店付款)']}],
-            140: [{self.oc.site: ['yahoo商城宅配', 'yahoo購物中心宅配(管制明文)']}, {self.oc.send: ['賣家宅配', '宅配']}],
+            75: [{self.oc.site: [SourceFiles().yahoo_shop_s.site]}, {self.oc.send: ['7-ELEVEN', '7-11 取貨 (到店付款)', '全家取貨 (到店付款)']}],
+            140: [{self.oc.site: [SourceFiles().yahoo_shop_h.site, SourceFiles().yahoo_mall.site]}, {self.oc.send: ['賣家宅配', '宅配']}],
         }
         self.service_fee = {
-            0: [{self.oc.site: ['yahoo商城店配']}, {self.oc.send: ['7-ELEVEN', '7-11 取貨 (到店付款)', '全家取貨 (到店付款)']}],
-            10: [{self.oc.site: ['yahoo商城宅配', 'yahoo購物中心宅配(管制明文)']}, {self.oc.send: ['賣家宅配', '宅配']}],
+            0: [{self.oc.site: [SourceFiles().yahoo_shop_s.site]}, {self.oc.send: ['7-ELEVEN', '7-11 取貨 (到店付款)', '全家取貨 (到店付款)']}],
+            10: [{self.oc.site: [SourceFiles().yahoo_shop_h.site, SourceFiles().yahoo_mall.site]}, {self.oc.send: ['賣家宅配', '宅配']}],
         }
         # 如有複數來源檔案須將檔案合併
         self.df = self.concat_fr()
@@ -326,7 +327,7 @@ class Converter:
         df_list = []
         for file in self.fr:
             df = read_xlsx(f'待轉檔/{file.file}', converters=self.cov, password=get_password(file.setting))
-            df[self.oc.site] = re.sub(r'(.xlsx)$', '', file.file)
+            df[self.oc.site] = file.site
             if file.file == SourceFiles().yahoo_shop_s.file and not df.empty:
                 df = df.rename(columns={'收件人電話': '收件人電話(日)', '轉單日': '轉單日期'})
                 df['收件人地址'] = df['超商類型'] + df['收件人地址']
