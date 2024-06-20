@@ -42,7 +42,7 @@ def read_xlsx(path: str, converters: dict, password=None) -> pd.DataFrame:
     return pd.read_excel(data if password else path, converters=converters)
 
 
-def get_files_name(path: str, ext=None) -> str:
+def get_files_name(path: str, ext=None) -> list[str]:
     '''抓取資料夾內檔案名稱, ext指定副檔名'''
     return [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))] if ext == None else [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f)) and f'.{ext}' in f]
 
@@ -52,7 +52,7 @@ class SourceFiles:
         def __init__(self, file: str, setting: str) -> None:
             self.file = file
             self.setting = setting
-            self.site = self.file.replace('.xlsx', '')
+            self.site = re.sub(r'\(管制明文\)|\.xlsx$', '', self.file)
 
     def __init__(self) -> None:
         self.yahoo_mall = self.Source('yahoo購物中心宅配(管制明文).xlsx', 'yahoo購物中心')
