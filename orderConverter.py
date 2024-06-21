@@ -187,7 +187,7 @@ class OutputColumns:
                 '商品管理編號 (SKU)': self.product_code,
                 '商品名稱': self.product,
                 '購買數量': self.number,
-                '商品價格': self.price,
+                '訂單與運費總和': self.price,
                 '配送方式': self.send,
                 '商家獎勵顧客的點數總和': self.point
             }
