@@ -293,6 +293,8 @@ class Converter:
         self.df[self.oc.price] = self.df[self.price.sum].sum(axis=1)
         # 替換空白電話號碼為'****'
         self.df.loc[self.df[self.oc.cel].isna(), self.oc.cel] = '****'
+        # 商品折扣補0
+        self.df[self.oc.discount] = self.df[self.oc.discount].fillna(0)
         # 如果在後續金額計算中需要把商品價格*購買數量
         if self.price.col:
             self.df[self.tmp] = self.df[self.price.col] * self.df[self.oc.number]
@@ -311,8 +313,6 @@ class Converter:
             self.df[self.oc.cel] = self.df[self.oc.cel].replace(r'#\d$', '', regex=True)
         if self.oc.fr in [ColumnType().shopee, ColumnType().shopline, ColumnType().rakuten]:
             self.df[self.oc.price] = self.df.groupby(self.oc.code)[self.oc.price].transform('first') / self.df.groupby(self.oc.code)[self.tmp].transform(lambda x: x.sum()) * self.df[self.tmp]
-        # 商品折扣補0
-        self.df[self.oc.discount] = self.df[self.oc.discount].fillna(0)
         # 金流費用
         self.multi_condition(self.cash_fee, [self.oc.cash_fee])
         if self.oc.fr in [ColumnType().rakuten]:
