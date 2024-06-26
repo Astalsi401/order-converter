@@ -285,12 +285,12 @@ class Converter:
         self.df[self.oc.date] = self.df[self.oc.date].fillna('').astype(str).apply(lambda x: dt.strptime(x, self.time_fmt).strftime('%Y%m%d'))
         # 付款方式
         self.df[self.oc.pay] = self.df[self.oc.pay].str.replace(r'\([^\(|\)]*\)', '', regex=True)
-        # 商品總金額
-        self.df[self.oc.price] = self.df[self.price.sum].sum(axis=1)
         # 替換空白電話號碼為'****'
         self.df.loc[self.df[self.oc.cel].isna(), self.oc.cel] = '****'
         # 商品折扣補0
         self.df[self.oc.discount] = self.df[self.oc.discount].fillna(0)
+        # 商品總金額
+        self.df[self.oc.price] = self.df[self.price.sum].sum(axis=1)
         # 如果在後續金額計算中需要把商品價格*購買數量
         if self.price.col:
             self.df[self.tmp] = self.df[self.price.col] * self.df[self.oc.number]
