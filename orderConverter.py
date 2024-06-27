@@ -267,7 +267,7 @@ class Converter:
     def to_excel(self) -> None:
         self.df.reindex(columns=self.oc.fin_cols).to_excel(self.file_name, index=False)
         logging.info(f'{self.file_name} saved!')
-        self.df.reindex(columns=self.oc.fin_cols).replace(u'\xa0|\u585c', '', regex=True).to_csv(self.file_name_csv, index=False, encoding='big5')
+        self.df.reindex(columns=self.oc.fin_cols).to_csv(self.file_name_csv, index=False, encoding='big5', errors='ignore')
         logging.info(f'{self.file_name_csv} saved!')
 
     def run(self) -> None:
