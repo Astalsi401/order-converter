@@ -1,7 +1,9 @@
 import os
 import re
-import pandas as pd
+import csv
+import codecs
 import logging
+import pandas as pd
 from io import BytesIO
 from msoffcrypto import OfficeFile, exceptions
 from datetime import datetime as dt
@@ -202,7 +204,7 @@ class FeeRate:
 
 
 class Converter:
-    def __init__(self, fr: list[SourceFiles.Source], cov: dict[str, classmethod], oc: OutputColumns, price: Price, time_fmt: str, file_name: str, feeRate: FeeRate = None) -> None:
+    def __init__(self, fr: list[SourceFiles.Source], cov: dict[str, classmethod], oc: OutputColumns, price: Price, time_fmt: str, file_name: str, file_name_csv: str, fee_rate: FeeRate = None) -> None:
         self.tmp = 'tmp'
         self.count = 'count'
         self.fr = fr
@@ -211,9 +213,9 @@ class Converter:
         self.price = price
         self.time_fmt = time_fmt
         self.file_name = f'{result}/{file_name}.xlsx'
-        self.file_name_csv = f'{result}/{file_name}.csv'
+        self.file_name_csv = f'{result}/{file_name_csv}.csv'
         settings = load(open(f'設定/settings.pkl', 'rb'))
-        self.feeRate = feeRate if feeRate else FeeRate(settings[file_name]['feeRate']['rate'], settings[file_name]['feeRate']['add'])
+        self.fee_rate = fee_rate if fee_rate else FeeRate(settings[file_name]['feeRate']['rate'], settings[file_name]['feeRate']['add'])
         self.pay_code = {
             1: [{self.oc.pay: ['銀行轉帳', '蝦皮錢包', '線上支付', 'ATM/銀行轉帳', 'ATM', '全家繳費', 'ATM轉帳']}],
             3: [{self.oc.pay: ['貨到付款', '現付', '7-11門市取貨付款']}],
@@ -264,8 +266,9 @@ class Converter:
 
     def to_excel(self) -> None:
         self.df.reindex(columns=self.oc.fin_cols).to_excel(self.file_name, index=False)
-        self.df.reindex(columns=self.oc.fin_cols).to_csv(self.file_name_csv, index=False)
         logging.info(f'{self.file_name} saved!')
+        self.df.reindex(columns=self.oc.fin_cols).replace(u'\xa0|\u585c', '', regex=True).to_csv(self.file_name_csv, index=False, encoding='big5')
+        logging.info(f'{self.file_name_csv} saved!')
 
     def run(self) -> None:
         # 如有複數來源檔案須將檔案合併
@@ -309,7 +312,7 @@ class Converter:
             # shopee刪除非手機號碼字串
             self.df[self.oc.cel] = self.df[self.oc.cel].replace(r'#\d$', '', regex=True)
         # 成交手續費
-        self.df.loc[self.df[self.count] == 0, self.oc.fee] = self.df[self.oc.price] * self.feeRate.pc + self.feeRate.add
+        self.df.loc[self.df[self.count] == 0, self.oc.fee] = self.df[self.oc.price] * self.fee_rate.pc + self.fee_rate.add
         # 金流費用
         self.multi_condition(self.cash_fee, [self.oc.cash_fee])
         if self.oc.fr in [ColumnType().rakuten]:
@@ -378,7 +381,8 @@ def main():
         oc=OutputColumns(ColumnType().yahoo),
         price=Price(['金額小計', '超贈點折抵金額', '行銷補助金額']),
         time_fmt='%Y/%m/%d %H:%M',
-        file_name='yahoo購物中心'
+        file_name='yahoo購物中心',
+        file_name_csv='yahoo購物中心_購中'
     )
     shopee = Converter(
         fr=[SourceFiles().shopee],
@@ -386,7 +390,8 @@ def main():
         oc=OutputColumns(ColumnType().shopee),
         price=Price(['買家總支付金額', '蝦幣折抵', '銀行信用卡活動折抵', '優惠券'], '商品活動價格'),
         time_fmt='%Y-%m-%d %H:%M',
-        file_name='shopee'
+        file_name='shopee',
+        file_name_csv='shopee_蝦皮'
     )
     shopline = Converter(
         fr=[SourceFiles().shopline],
@@ -394,7 +399,8 @@ def main():
         oc=OutputColumns(ColumnType().shopline),
         price=Price(['付款總金額'], '商品結帳價'),
         time_fmt='%Y-%m-%d %H:%M:%S',
-        file_name='shopline'
+        file_name='shopline',
+        file_name_csv='shopline_本站'
     )
     rakuten = Converter(
         fr=[SourceFiles().rakuten],
@@ -402,7 +408,8 @@ def main():
         oc=OutputColumns(ColumnType().rakuten),
         price=Price(['商品總金額'], '商品價格'),
         time_fmt='%Y-%m-%d %H:%M:%S',
-        file_name='rakuten'
+        file_name='rakuten',
+        file_name_csv='rakuten_樂天'
     )
     [cov.run() for cov in [yahoo_mall, shopee, shopline, rakuten][:]]
 
