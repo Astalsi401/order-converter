@@ -204,7 +204,7 @@ class FeeRate:
 
 
 class Converter:
-    def __init__(self, fr: list[SourceFiles.Source], cov: dict[str, classmethod], oc: OutputColumns, price: Price, time_fmt: str, file_name: str, file_name_csv: str, fee_rate: FeeRate = None) -> None:
+    def __init__(self, fr: list[SourceFiles.Source], cov: dict[str, classmethod], oc: OutputColumns, price: Price, time_fmt: str, file_name: str, fee_rate: FeeRate = None) -> None:
         self.tmp = 'tmp'
         self.count = 'count'
         self.fr = fr
@@ -213,7 +213,6 @@ class Converter:
         self.price = price
         self.time_fmt = time_fmt
         self.file_name = f'{result}/{file_name}.xlsx'
-        self.file_name_csv = f'{result}/{file_name_csv}.csv'
         settings = load(open(f'設定/settings.pkl', 'rb'))
         self.fee_rate = fee_rate if fee_rate else FeeRate(settings[file_name]['feeRate']['rate'], settings[file_name]['feeRate']['add'])
         self.pay_code = {
@@ -253,29 +252,23 @@ class Converter:
                     self.df.loc[self.df['_merge'] == 'both', cols] = key
                     self.df.drop(columns=['_merge'], inplace=True)
 
-    def product_detail(self) -> pd.DataFrame:
-        '''合併商品總表資料'''
+    def product_detail(self) -> None:
+        '''合併商品總表資料並計算撿貨費、進貨小計'''
         self.df.drop(columns=[col for col in [self.oc.product] if col in self.df.columns], inplace=True)
         d = pd.read_excel('設定/商品總表(管制明文).xlsx', converters={'商品代號': str})
         d.loc[~d['進貨價_活動'].isna(), '進貨價'] = d['進貨價_活動']
-        return self.df.merge(d.rename(columns={'商品代號': self.oc.product_code, '商品名稱': self.oc.product, '廠商名稱': self.oc.manufacture, '進貨價': self.oc.purchase_price, '預設倉庫': self.oc.warehouse, '負責PM': self.oc.pm}), on=self.oc.product_code, how='left')
+        self.df = self.df.merge(d.rename(columns={'商品代號': self.oc.product_code, '商品名稱': self.oc.product, '廠商名稱': self.oc.manufacture, '進貨價': self.oc.purchase_price, '預設倉庫': self.oc.warehouse, '負責PM': self.oc.pm}), on=self.oc.product_code, how='left')
+        # 撿貨費
+        self.df[self.oc.tally] = (self.df['撿貨數量'] * self.df[self.oc.number] * 7.5).fillna(0)
+        # 進貨小計
+        self.df[self.oc.purchase_subtotal] = self.df[self.oc.purchase_price] * self.df[self.oc.number]
 
     def add_columns(self) -> pd.DataFrame:
         '''依據expCol補齊所需的欄位'''
         return self.df.reindex(columns=list(set(self.oc.fin_cols + self.df.columns.to_list())))
 
-    def to_excel(self) -> None:
-        self.df.reindex(columns=self.oc.fin_cols).to_excel(self.file_name, index=False)
-        logging.info(f'{self.file_name} saved!')
-        self.df.reindex(columns=self.oc.fin_cols).to_csv(self.file_name_csv, index=False, encoding='big5', errors='ignore')
-        logging.info(f'{self.file_name_csv} saved!')
-
-    def run(self) -> None:
-        # 如有複數來源檔案須將檔案合併
-        self.df = self.concat_fr()
-        if self.df.empty:
-            return
-        logging.info(f'正在轉檔：{'、'.join([f.file for f in self.fr])}')
+    def preprocess(self) -> None:
+        '''建立後續計算所需欄位：付款代號、辨別是否為該訂單第一件商品、訂單編號、郵遞區號取前三碼、更改訂單成立日期格式、付款方式、替換空白電話號碼為'****'、商品折扣補0、商品總金額'''
         # 付款代號
         self.multi_condition(self.pay_code, [self.oc.pay_code])
         # 辨別是否為該訂單第一件商品
@@ -294,6 +287,8 @@ class Converter:
         self.df[self.oc.discount] = self.df[self.oc.discount].fillna(0)
         # 商品總金額
         self.df[self.oc.price] = self.df[self.price.sum].sum(axis=1)
+        # 訂單處理費
+        self.df.loc[self.df[self.count] == 0, self.oc.order_fee] = 26
         # 如果在後續金額計算中需要把商品價格*購買數量
         if self.price.col:
             self.df[self.tmp] = self.df[self.price.col] * self.df[self.oc.number]
@@ -311,6 +306,9 @@ class Converter:
         if self.oc.fr in [ColumnType().shopee]:
             # shopee刪除非手機號碼字串
             self.df[self.oc.cel] = self.df[self.oc.cel].replace(r'#\d$', '', regex=True)
+
+    def cols_basic_price(self) -> None:
+        '''需根據訂單總金額計算的欄位'''
         # 成交手續費
         self.df.loc[self.df[self.count] == 0, self.oc.fee] = self.df[self.oc.price] * self.fee_rate.pc + self.fee_rate.add
         # 金流費用
@@ -321,23 +319,23 @@ class Converter:
         elif self.oc.fr in [ColumnType().yahoo]:
             # yahoo金流費用
             self.df.loc[self.df[self.oc.pay_code] == 4, self.oc.cash_fee] = self.df[self.oc.price] * self.df[self.oc.cash_fee]
-        # 訂單處理費
-        self.df.loc[self.df[self.count] == 0, self.oc.order_fee] = 26
         if self.oc.fr in [ColumnType().shopee, ColumnType().shopline, ColumnType().rakuten]:
             self.df[self.oc.price] = self.df.groupby(self.oc.code)[self.oc.price].transform('first') / self.df.groupby(self.oc.code)[self.tmp].transform(lambda x: x.sum()) * self.df[self.tmp]
-        # shopline, rakuten運費
+
+    def ship_calculate(self) -> None:
+        '''計算運費'''
+        # shopline, rakuten運費須拆分至新列
         if self.oc.fr in [ColumnType().shopline, ColumnType().rakuten]:
             ship = self.df.loc[self.df['運費'] > 0].copy().assign(**{self.oc.product_code: '888888888'})
             ship[self.oc.price] = ship['運費']
             ship = ship[self.oc.ship_cols]
             self.df = pd.concat([self.df, ship]).sort_values(by=[self.oc.date, self.oc.code])
         self.df.loc[self.df[self.oc.product_code] == '888888888', self.oc.number] = 1
-        # 合併商品總表中的資訊並計算撿貨費
-        self.df = self.product_detail()
-        # 撿貨費
-        self.df[self.oc.tally] = (self.df['撿貨數量'] * self.df[self.oc.number] * 7.5).fillna(0)
-        # 進貨小計
-        self.df[self.oc.purchase_subtotal] = self.df[self.oc.purchase_price] * self.df[self.oc.number]
+        # 運費
+        self.multi_condition(self.ship, [self.oc.ship])
+
+    def cost_calculate(self) -> None:
+        '''計算成本'''
         if self.oc.fr in [ColumnType().yahoo, ColumnType().rakuten]:
             # 訂單金額
             self.df[self.oc.subtotal] = self.df.groupby(self.oc.code)[self.price.sum].transform(lambda x: x.sum()).sum(axis=1)
@@ -346,35 +344,55 @@ class Converter:
             self.df[self.oc.subtotal] = self.df[self.price.sum].sum(axis=1)
         # rakuten物流交寄使用費
         self.multi_condition(self.delivery_fee, [self.oc.delivery_fee])
-        # 運費
-        self.multi_condition(self.ship, [self.oc.ship])
         # shopee隱碼服務費
         self.multi_condition(self.service_fee, [self.oc.service_fee])
         # 依倉庫調整撿貨費、訂單處理費、運費
         self.df.loc[self.df[self.oc.warehouse].fillna('').str.contains(r'^(?:原廠出貨|公司倉)$', regex=True), [self.oc.tally, self.oc.order_fee]] = 0
         self.df.loc[self.df[self.oc.warehouse] == '原廠出貨', self.oc.ship] = 0
         # 如果不是第一件商品，則'訂單金額','運費','訂單處理費','隱碼服務費','點數成本負擔'為0
-        self.df.loc[self.df[self.count] != 0, [self.oc.subtotal, self.oc.ship, self.oc.order_fee, self.oc.service_fee]] = 0
+        self.order_costs = [self.oc.subtotal, self.oc.ship, self.oc.order_fee, self.oc.service_fee]
+        self.df.loc[self.df[self.count] != 0, self.order_costs] = 0
+        self.df[self.order_costs] = self.df[self.order_costs].fillna(0)
+
+    def profit_calculate(self) -> None:
+        '''計算利潤'''
         # 利潤
         self.df[self.oc.subtotal] = self.df.groupby(self.oc.code)[self.oc.subtotal].transform('first')
         self.df[self.oc.profit] = self.df[self.oc.subtotal] - self.df.groupby(self.oc.code)[self.oc.profit_cols].transform(lambda x: x.sum()).sum(axis=1)
         # 利潤百分比
         self.df[self.oc.profit_pc] = (self.df[self.oc.profit] / self.df[self.oc.subtotal] * 100).round(2).astype(str) + '%'
-        # 補齊需要的欄位
-        self.df = self.add_columns()
         # 如果不是第一件商品，則'利潤','利潤百分比'為0
         self.df.loc[self.df[self.count] != 0, [self.oc.profit, self.oc.profit_pc]] = 0
+
+    def to_excel(self) -> None:
+        # 補齊需要的欄位
+        self.df = self.add_columns()
         # 價格四捨五入至小數點後1位
         self.round_cols = [col for col in self.oc.round_cols if col in self.df.columns]
         self.df[self.round_cols] = self.df[self.round_cols].fillna(0).round(1)
         # 利潤四捨五入至整數
         self.df[self.oc.profit] = self.df[self.oc.profit].fillna(0).round(0)
         # 匯出需要的欄位
+        self.df.reindex(columns=self.oc.fin_cols).to_excel(self.file_name, index=False)
+        logging.info(f'{self.file_name} saved!')
+
+    def run(self) -> None:
+        # 如有複數來源檔案須將檔案合併
+        self.df = self.concat_fr()
+        if self.df.empty:
+            return
+        logging.info(f'正在轉檔：{'、'.join([f.file for f in self.fr])}')
+        self.preprocess()
+        self.cols_basic_price()
+        self.ship_calculate()
+        self.product_detail()
+        self.cost_calculate()
+        self.profit_calculate()
         self.to_excel()
 
 
 def main():
-    [os.remove(f'{result}/{f}') for f in get_files_name(result, r'xlsx|csv') if os.path.exists(f'{result}/{f}')]
+    [os.remove(f'{result}/{f}') for f in get_files_name(result, 'xlsx') if os.path.exists(f'{result}/{f}')]
     yahoo_mall = Converter(
         fr=[SourceFiles().yahoo_mall],
         cov={'交易序號': str, '訂單編號': str, '店家商品料號': str, '收件人電話(日)': str, '收件人行動電話': str, '收件人郵遞區號': str, '轉單日期': str},
@@ -382,7 +400,6 @@ def main():
         price=Price(['金額小計', '超贈點折抵金額', '行銷補助金額']),
         time_fmt='%Y/%m/%d %H:%M',
         file_name='yahoo購物中心',
-        file_name_csv='yahoo購物中心_購中'
     )
     shopee = Converter(
         fr=[SourceFiles().shopee],
@@ -391,7 +408,6 @@ def main():
         price=Price(['買家總支付金額', '蝦幣折抵', '銀行信用卡活動折抵', '優惠券'], '商品活動價格'),
         time_fmt='%Y-%m-%d %H:%M',
         file_name='shopee',
-        file_name_csv='shopee_蝦皮'
     )
     shopline = Converter(
         fr=[SourceFiles().shopline],
@@ -400,7 +416,6 @@ def main():
         price=Price(['付款總金額'], '商品結帳價'),
         time_fmt='%Y-%m-%d %H:%M:%S',
         file_name='shopline',
-        file_name_csv='shopline_本站'
     )
     rakuten = Converter(
         fr=[SourceFiles().rakuten],
@@ -409,9 +424,8 @@ def main():
         price=Price(['商品總金額'], '商品價格'),
         time_fmt='%Y-%m-%d %H:%M:%S',
         file_name='rakuten',
-        file_name_csv='rakuten_樂天'
     )
-    [cov.run() for cov in [yahoo_mall, shopee, shopline, rakuten][:]]
+    [cov.run() for cov in [yahoo_mall, shopee, shopline, rakuten]]
 
 
 if __name__ == '__main__':
