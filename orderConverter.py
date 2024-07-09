@@ -14,6 +14,12 @@ pd.set_option('display.max.columns', None)
 result = 'import'
 
 
+class EmptyDataError(ValueError):
+    def __init__(self, message: str, file: str) -> None:
+        super().__init__(message)
+        self.file = file
+
+
 def get_password(setting_key: str) -> str:
     setting_pkl = '設定/settings.pkl'
     if not os.path.exists(setting_pkl):
@@ -270,7 +276,7 @@ class Converter:
 
     def return_empty(self) -> None:
         if self.df.empty:
-            raise ValueError(f'無訂單資料：{'、'.join([f.file for f in self.fr])}')
+            raise EmptyDataError('無訂單資料', '、'.join([f.file for f in self.fr]))
 
     def preprocess(self) -> None:
         '''建立後續計算所需欄位：付款代號、辨別是否為該訂單第一件商品、訂單編號、郵遞區號取前三碼、更改訂單成立日期格式、付款方式、替換空白電話號碼為'****'、商品折扣補0、商品總金額'''
@@ -439,7 +445,7 @@ if __name__ == '__main__':
         main()
     except ValueError as e:
         if str(e) == '無訂單資料':
-            logging.info('無訂單資料')
+            logging.info(f'無訂單資料：{e.file}')
         else:
             logging.exception(f'錯誤訊息已處存至 {logFile}')
     except:
