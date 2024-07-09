@@ -270,7 +270,7 @@ class Converter:
 
     def return_empty(self) -> None:
         if self.df.empty:
-            raise ValueError('無訂單資料')
+            raise ValueError(f'{'、'.join([f.file for f in self.fr])} 無訂單資料')
 
     def preprocess(self) -> None:
         '''建立後續計算所需欄位：付款代號、辨別是否為該訂單第一件商品、訂單編號、郵遞區號取前三碼、更改訂單成立日期格式、付款方式、替換空白電話號碼為'****'、商品折扣補0、商品總金額'''
