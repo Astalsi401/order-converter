@@ -128,7 +128,7 @@ class OutputColumns:
             self.discount = '蝦幣回饋券'
             self.fee = '交易手續費12%\n(成交、活動、金流)'
             self.profit_cols = [self.purchase_subtotal, self.fee, self.discount, self.tally, self.order_fee, self.service_fee, self.ship]
-            self.fin_cols = [self.code, self.site, self.customer, self.post_code, self.address, self.tel, self.cel, self.date, self.product_code, self.product, self.number, self.price, self.pay_code, self.pay, self.manufacture, self.purchase_price, self.purchase_subtotal, self.warehouse, self.trade_code, self.subtotal, self.fee, self.discount, self.service_fee, self.tally, self.order_fee, self.ship, self.profit, self.profit_pc, self.pm, self.note]
+            self.fin_cols = [self.code, self.site, self.customer, self.post_code, self.address, self.tel, self.cel, self.date, self.product_code, self.product, self.number, self.price, self.pay_code, self.pay, self.manufacture, self.purchase_price, self.purchase_subtotal, self.warehouse, self.subtotal, self.fee, self.discount, self.service_fee, self.tally, self.order_fee, self.ship, self.profit, self.profit_pc, self.pm, self.note]
             self.rename = {
                 '訂單編號': self.code,
                 '收件者姓名': self.customer,
@@ -150,7 +150,7 @@ class OutputColumns:
             self.source_platform = '導購來源平台'
             self.profit_cols = [self.purchase_subtotal, self.fee, self.tally, self.order_fee, self.ship]
             self.ship_cols = [self.code, self.site, self.customer, self.post_code, self.address, self.tel, self.cel, self.date, self.product_code, self.price]
-            self.fin_cols = [self.code, self.site, self.customer, self.post_code, self.address, self.tel, self.cel, self.date, self.product_code, self.product, self.number, self.price, self.discount, self.custom_discount, self.coupon, self.reward, self.pay_code, self.pay, self.manufacture, self.purchase_price, self.purchase_subtotal, self.warehouse, self.source_platform, self.trade_code, self.subtotal, self.fee, self.tally, self.order_fee, self.ship, self.profit, self.profit_pc, self.pm, self.note]
+            self.fin_cols = [self.code, self.site, self.customer, self.post_code, self.address, self.tel, self.cel, self.date, self.product_code, self.product, self.number, self.price, self.discount, self.custom_discount, self.coupon, self.reward, self.pay_code, self.pay, self.manufacture, self.purchase_price, self.purchase_subtotal, self.warehouse, self.source_platform, self.subtotal, self.fee, self.tally, self.order_fee, self.ship, self.profit, self.profit_pc, self.pm, self.note]
             self.rename = {
                 '訂單號碼': self.code,
                 '收件人': self.customer,
