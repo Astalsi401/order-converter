@@ -268,6 +268,10 @@ class Converter:
         '''依據expCol補齊所需的欄位'''
         return self.df.reindex(columns=list(set(self.oc.fin_cols + self.df.columns.to_list())))
 
+    def return_empty(self) -> None:
+        if self.df.empty:
+            raise ValueError('無訂單資料')
+
     def preprocess(self) -> None:
         '''建立後續計算所需欄位：付款代號、辨別是否為該訂單第一件商品、訂單編號、郵遞區號取前三碼、更改訂單成立日期格式、付款方式、替換空白電話號碼為'****'、商品折扣補0、商品總金額'''
         # 付款代號
@@ -297,6 +301,7 @@ class Converter:
             # 刪除shopline已取消\非貨到付款且未付款的訂單
             self.df = self.df.query('訂單狀態 != "已取消"')
             self.df = self.df[~((self.df[self.oc.pay_code] != 6) & (self.df[self.oc.pay_code] != 3) & (self.df['付款狀態'] == '未付款'))]
+            self.return_empty()
             # shopline商品總金額要減掉運費
             self.df[self.oc.price] = self.df[self.oc.price] - self.df['運費']
         # rakuten商品總金額要減掉優惠券與運費
@@ -379,10 +384,9 @@ class Converter:
     def run(self) -> None:
         # 如有複數來源檔案須將檔案合併
         self.df = self.concat_fr()
-        self.preprocess()
-        if self.df.empty:
-            return
+        self.return_empty()
         logging.info(f'正在轉檔：{'、'.join([f.file for f in self.fr])}')
+        self.preprocess()
         self.cols_basic_price()
         self.ship_calculate()
         self.product_detail()
@@ -433,6 +437,11 @@ if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S', level=logging.INFO, handlers=[logging.FileHandler(logFile), logging.StreamHandler()])
     try:
         main()
+    except ValueError as e:
+        if str(e) == '無訂單資料':
+            logging.info('無訂單資料')
+        else:
+            logging.exception(f'錯誤訊息已處存至 {logFile}')
     except:
         logging.exception(f'錯誤訊息已處存至 {logFile}')
     input('按Enter繼續...')
