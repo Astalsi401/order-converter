@@ -147,9 +147,10 @@ class OutputColumns:
             self.custom_discount = '自訂折扣合計'
             self.coupon = '折抵購物金'
             self.reward = '點數折現'
+            self.source_platform = '導購來源平台'
             self.profit_cols = [self.purchase_subtotal, self.fee, self.tally, self.order_fee, self.ship]
             self.ship_cols = [self.code, self.site, self.customer, self.post_code, self.address, self.tel, self.cel, self.date, self.product_code, self.price]
-            self.fin_cols = [self.code, self.site, self.customer, self.post_code, self.address, self.tel, self.cel, self.date, self.product_code, self.product, self.number, self.price, self.discount, self.custom_discount, self.coupon, self.reward, self.pay_code, self.pay, self.manufacture, self.purchase_price, self.purchase_subtotal, self.warehouse, self.trade_code, self.subtotal, self.fee, self.tally, self.order_fee, self.ship, self.profit, self.profit_pc, self.pm, self.note]
+            self.fin_cols = [self.code, self.site, self.customer, self.post_code, self.address, self.tel, self.cel, self.date, self.product_code, self.product, self.number, self.price, self.discount, self.custom_discount, self.coupon, self.reward, self.pay_code, self.pay, self.manufacture, self.purchase_price, self.purchase_subtotal, self.warehouse, self.source_platform, self.trade_code, self.subtotal, self.fee, self.tally, self.order_fee, self.ship, self.profit, self.profit_pc, self.pm, self.note]
             self.rename = {
                 '訂單號碼': self.code,
                 '收件人': self.customer,
@@ -292,7 +293,6 @@ class Converter:
         # 如果在後續金額計算中需要把商品價格*購買數量
         if self.price.col:
             self.df[self.tmp] = self.df[self.price.col] * self.df[self.oc.number]
-        # shopline商品總金額要減掉運費
         if self.oc.fr in [ColumnType().shopline]:
             # 刪除shopline已取消\非貨到付款且未付款的訂單
             self.df = self.df.query('訂單狀態 != "已取消"')
@@ -379,10 +379,10 @@ class Converter:
     def run(self) -> None:
         # 如有複數來源檔案須將檔案合併
         self.df = self.concat_fr()
+        self.preprocess()
         if self.df.empty:
             return
         logging.info(f'正在轉檔：{'、'.join([f.file for f in self.fr])}')
-        self.preprocess()
         self.cols_basic_price()
         self.ship_calculate()
         self.product_detail()
