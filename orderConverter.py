@@ -435,19 +435,20 @@ def main():
         time_fmt='%Y-%m-%d %H:%M:%S',
         file_name='rakuten',
     )
-    [cov.run() for cov in [yahoo_mall, shopee, shopline, rakuten]]
+    for cov in [yahoo_mall, shopee, shopline, rakuten]:
+        try:
+            cov.run()
+        except ValueError as e:
+            if str(e) == '無訂單資料':
+                logging.info(f'無訂單資料：{e.file}')
+            else:
+                logging.exception(f'錯誤訊息已處存至 {logFile}')
+        except:
+            logging.exception(f'錯誤訊息已處存至 {logFile}')
 
 
 if __name__ == '__main__':
     logFile = '設定/run.log'
     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S', level=logging.INFO, handlers=[logging.FileHandler(logFile), logging.StreamHandler()])
-    try:
-        main()
-    except ValueError as e:
-        if str(e) == '無訂單資料':
-            logging.info(f'無訂單資料：{e.file}')
-        else:
-            logging.exception(f'錯誤訊息已處存至 {logFile}')
-    except:
-        logging.exception(f'錯誤訊息已處存至 {logFile}')
+    main()
     input('按Enter繼續...')
