@@ -1,7 +1,5 @@
 import os
 import re
-import csv
-import codecs
 import logging
 import pandas as pd
 from io import BytesIO
@@ -223,7 +221,7 @@ class Converter:
         settings = load(open(f'設定/settings.pkl', 'rb'))
         self.fee_rate = fee_rate if fee_rate else FeeRate(settings[file_name]['feeRate']['rate'], settings[file_name]['feeRate']['add'])
         self.pay_code = {
-            1: [{self.oc.pay: ['銀行轉帳', '蝦皮錢包', '線上支付', 'ATM/銀行轉帳', 'ATM', '全家繳費', 'ATM轉帳']}],
+            1: [{self.oc.pay: ['銀行轉帳', '蝦皮錢包', '線上支付', 'ATM/銀行轉帳', 'ATM', '全家繳費', 'ATM轉帳', '銀行轉帳／ATM (競合)']}],
             3: [{self.oc.pay: ['貨到付款', '現付', '7-11門市取貨付款']}],
             4: [{self.oc.pay: ['信用卡', '信用卡分期付款', 'LINE Pay', '信用卡付款', '信用卡一次', '分期付款', '街口支付']}],
             6: [{self.oc.pay: ['7-11', '7-11門市取貨付款', '全家門市取貨付款']}, {self.oc.send: ['7-ELEVEN', '7-11 取貨 (到店付款)', '全家取貨 (到店付款)'], self.oc.pay: ['貨到付款', '貨到付款', '貨到付款']}],
