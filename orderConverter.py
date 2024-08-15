@@ -152,9 +152,10 @@ class OutputColumns:
             self.coupon = '折抵購物金'
             self.reward = '點數折現'
             self.source_platform = '導購來源平台'
-            self.profit_cols = [self.purchase_subtotal, self.fee, self.tally, self.order_fee, self.ship]
+            self.line_fee = 'LINE購物手續費 8%+3'
+            self.profit_cols = [self.purchase_subtotal, self.fee, self.tally, self.order_fee, self.line_fee, self.ship]
             self.ship_cols = [self.code, self.site, self.customer, self.post_code, self.address, self.tel, self.cel, self.date, self.product_code, self.price]
-            self.fin_cols = [self.code, self.site, self.customer, self.post_code, self.address, self.tel, self.cel, self.date, self.product_code, self.product, self.number, self.price, self.discount, self.custom_discount, self.coupon, self.reward, self.pay_code, self.pay, self.manufacture, self.purchase_price, self.purchase_subtotal, self.warehouse, self.source_platform, self.subtotal, self.fee, self.tally, self.order_fee, self.ship, self.profit, self.profit_pc, self.pm, self.note]
+            self.fin_cols = [self.code, self.site, self.customer, self.post_code, self.address, self.tel, self.cel, self.date, self.product_code, self.product, self.number, self.price, self.discount, self.custom_discount, self.coupon, self.reward, self.pay_code, self.pay, self.manufacture, self.purchase_price, self.purchase_subtotal, self.warehouse, self.source_platform, self.subtotal, self.fee, self.line_fee, self.tally, self.order_fee, self.ship, self.profit, self.profit_pc, self.pm, self.note]
             self.rename = {
                 '訂單號碼': self.code,
                 '收件人': self.customer,
@@ -328,6 +329,9 @@ class Converter:
         elif self.oc.fr in [ColumnType().yahoo]:
             # yahoo金流費用
             self.df.loc[self.df[self.oc.pay_code] == 4, self.oc.cash_fee] = self.df[self.oc.price] * self.df[self.oc.cash_fee]
+        if self.oc.fr in [ColumnType().shopline]:
+            # shopline line購物手續費
+            self.df.loc[self.df[self.oc.source_platform] == 'LINE購物', self.oc.line_fee] = self.df[self.oc.price] * 0.08 + 3
         if self.oc.fr in [ColumnType().shopee, ColumnType().shopline, ColumnType().rakuten]:
             self.df[self.oc.price] = self.df.groupby(self.oc.code)[self.oc.price].transform('first') / self.df.groupby(self.oc.code)[self.tmp].transform(lambda x: x.sum()) * self.df[self.tmp]
 
