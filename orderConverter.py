@@ -58,13 +58,13 @@ class SourceFiles:
         def __init__(self, file: str, setting: str) -> None:
             self.file = file
             self.setting = setting
-            self.site = re.sub(r'\(管制明文\)|\.xlsx$', '', self.file)
+            self.site = re.sub(r'\.xlsx$', '', self.file)
 
     def __init__(self) -> None:
-        self.yahoo_mall = self.Source('yahoo購物中心宅配(管制明文).xlsx', 'yahoo購物中心')
-        self.shopee = self.Source('shopee店配宅配(管制明文).xlsx', 'shopee')
-        self.rakuten = self.Source('rakuten店配宅配(管制明文).xlsx', 'rakuten')
-        self.shopline = self.Source('shopline店配宅配(管制明文).xlsx', 'shopline')
+        self.yahoo_mall = self.Source('yahoo購物中心宅配.xlsx', 'yahoo購物中心')
+        self.shopee = self.Source('shopee店配宅配.xlsx', 'shopee')
+        self.rakuten = self.Source('rakuten店配宅配.xlsx', 'rakuten')
+        self.shopline = self.Source('shopline店配宅配.xlsx', 'shopline')
 
 
 class ColumnType:
