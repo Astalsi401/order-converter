@@ -261,7 +261,7 @@ class Converter:
     def product_detail(self) -> None:
         '''合併商品總表資料並計算撿貨費、進貨小計'''
         self.df.drop(columns=[col for col in [self.oc.product] if col in self.df.columns], inplace=True)
-        d = pd.read_excel('設定/商品總表(管制明文).xlsx', converters={'商品代號': str})
+        d = pd.read_excel('設定/商品總表.xlsx', converters={'商品代號': str})
         d.loc[~d['進貨價_活動'].isna(), '進貨價'] = d['進貨價_活動']
         self.df = self.df.merge(d.rename(columns={'商品代號': self.oc.product_code, '商品名稱': self.oc.product, '廠商名稱': self.oc.manufacture, '進貨價': self.oc.purchase_price, '預設倉庫': self.oc.warehouse, '負責PM': self.oc.pm}), on=self.oc.product_code, how='left')
         # 撿貨費
