@@ -86,6 +86,7 @@ def main():
 
 if __name__ == '__main__':
     logFile = '設定/run.log'
+    os.makedirs('設定', exist_ok=True)
     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S', level=logging.INFO, handlers=[logging.FileHandler(logFile), logging.StreamHandler()])
     try:
         main()
