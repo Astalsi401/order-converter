@@ -1,7 +1,7 @@
 # source and setting
 設定/*
 待轉檔/*.xlsx
-import/*
+import/*.xlsx
 examples/*
 tmp.py
 *.tsv
