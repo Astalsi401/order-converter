@@ -223,24 +223,24 @@ class Converter:
         self.file_name = f'{result}/{file_name}.xlsx'
         settings = load(open(f'設定/settings.pkl', 'rb'))
         self.fee_rate = fee_rate if fee_rate else FeeRate(settings[file_name]['feeRate']['rate'], settings[file_name]['feeRate']['add'])
-        self.pay_code = {
+        self.pay_code: dict[float | int, list[dict[str, list]]] = {
             1: [{self.oc.pay: ['銀行轉帳', '蝦皮錢包', '線上支付', 'ATM/銀行轉帳', 'ATM', '全家繳費', 'ATM轉帳', '銀行轉帳／ATM (競合)']}],
             3: [{self.oc.pay: ['貨到付款', '現付', '7-11門市取貨付款']}],
             4: [{self.oc.pay: ['信用卡', '信用卡分期付款', 'LINE Pay', '信用卡付款', '信用卡一次', '分期付款', '街口支付']}],
             6: [{self.oc.pay: ['7-11', '7-11門市取貨付款', '全家門市取貨付款']}, {self.oc.send: ['7-ELEVEN', '7-11 取貨 (到店付款)', '全家取貨 (到店付款)'], self.oc.pay: ['貨到付款', '貨到付款', '貨到付款']}],
         }
-        self.ship = {
+        self.ship: dict[float | int, list[dict[str, list]]] = {
             75: [{self.oc.send: ['7-ELEVEN', '7-11 取貨 (到店付款)', '全家取貨 (到店付款)', '全家門市取貨', '7-11門市取貨']}],
             140: [{self.oc.site: [SourceFiles().yahoo_mall.site]}, {self.oc.send: ['賣家宅配', '宅配', '常溫宅配(倉儲中心)']}],
         }
-        self.service_fee = {
+        self.service_fee: dict[float | int, list[dict[str, list]]] = {
             2.5: [{self.oc.send: ['7-ELEVEN', '7-11 取貨 (到店付款)', '全家取貨 (到店付款)', '全家取貨 (取貨不付款)', '蝦皮店到店']}],
             12.5: [{self.oc.send: ['賣家宅配：箱購', '賣家宅配：冷凍', '宅配', '宅配通']}],
         }
-        self.delivery_fee = {
+        self.delivery_fee: dict[float | int, list[dict[str, list]]] = {
             48: [{self.oc.send: ['全家門市取貨', '7-11門市取貨']}]
         }
-        self.cash_fee = {
+        self.cash_fee: dict[float | int, list[dict[str, list]]] = {
             0: [{self.oc.pay: ['銀行轉帳', '蝦皮錢包', '線上支付', 'ATM/銀行轉帳', 'ATM', '全家繳費']}],
             0.02: [{self.oc.pay: ['信用卡', '信用卡分期付款', '信用卡付款', '信用卡一次', '分期付款', '街口支付']}],
             0.022: [{self.oc.pay: ['LINE Pay']}],
@@ -251,7 +251,7 @@ class Converter:
     def concat_fr(self) -> pd.DataFrame:
         return pd.concat([read_xlsx(f'待轉檔/{file.file}', converters=self.cov, password=get_password(file.setting)).assign(**{self.oc.site: file.site}) for file in self.fr]).rename(columns=self.oc.rename)
 
-    def multi_condition(self, conditions: dict[int, list[dict[str, list]]], cols: list[str]) -> None:
+    def multi_condition(self, conditions: dict[float | int, list[dict[str, list]]], cols: list[str]) -> None:
         # 將篩選條件作為新的df進行left_merge，並將欄位col取代為key值
         for key, dfs in conditions.items():
             for df in dfs:
