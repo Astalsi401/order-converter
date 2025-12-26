@@ -6,6 +6,7 @@ from io import BytesIO
 from msoffcrypto import OfficeFile, exceptions
 from datetime import datetime as dt
 from pickle import load
+from typing import Union
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 pd.set_option('display.max.columns', None)
@@ -18,7 +19,7 @@ class EmptyDataError(ValueError):
         self.file = file
 
 
-def get_password(setting_key: str) -> str:
+def get_password(setting_key: str) -> Union[str, None]:
     setting_pkl = '設定/settings.pkl'
     if not os.path.exists(setting_pkl):
         raise FileNotFoundError('請先執行setting.py，並儲存預設設定檔')
@@ -33,6 +34,7 @@ def read_xlsx(path: str, converters: dict[str, classmethod], password=None) -> p
     '''讀取excel，若檔案不存在則回傳空dataframe'''
     if not os.path.isfile(path):
         return pd.DataFrame()
+    data = None
     if password:
         try:
             data = BytesIO()
@@ -198,7 +200,7 @@ class OutputColumns:
 
 
 class Price:
-    def __init__(self, sum: list[str], col: str = None) -> None:
+    def __init__(self, sum: list[str], col: Union[str, None] = None) -> None:
         self.sum = sum
         self.col = col
 
@@ -210,7 +212,7 @@ class FeeRate:
 
 
 class Converter:
-    def __init__(self, fr: list[SourceFiles.Source], cov: dict[str, classmethod], oc: OutputColumns, price: Price, time_fmt: str, file_name: str, fee_rate: FeeRate = None) -> None:
+    def __init__(self, fr: list[SourceFiles.Source], cov: dict[str, classmethod], oc: OutputColumns, price: Price, time_fmt: str, file_name: str, fee_rate: Union[FeeRate, None] = None) -> None:
         self.tmp = 'tmp'
         self.count = 'count'
         self.fr = fr
@@ -233,7 +235,7 @@ class Converter:
         }
         self.service_fee = {
             0: [{self.oc.send: ['7-ELEVEN', '7-11 取貨 (到店付款)', '全家取貨 (到店付款)']}],
-            10: [{self.oc.send: ['賣家宅配', '宅配']}],
+            10: [{self.oc.send: ['賣家宅配：箱購', '賣家宅配：冷凍', '宅配']}],
         }
         self.delivery_fee = {
             48: [{self.oc.send: ['全家門市取貨', '7-11門市取貨']}]
@@ -249,7 +251,7 @@ class Converter:
     def concat_fr(self) -> pd.DataFrame:
         return pd.concat([read_xlsx(f'待轉檔/{file.file}', converters=self.cov, password=get_password(file.setting)).assign(**{self.oc.site: file.site}) for file in self.fr]).rename(columns=self.oc.rename)
 
-    def multi_condition(self, conditions: dict[str, list[dict[str, list]]], cols: list[str]) -> None:
+    def multi_condition(self, conditions: dict[int, list[dict[str, list]]], cols: list[str]) -> None:
         # 將篩選條件作為新的df進行left_merge，並將欄位col取代為key值
         for key, dfs in conditions.items():
             for df in dfs:
@@ -359,6 +361,7 @@ class Converter:
         self.multi_condition(self.delivery_fee, [self.oc.delivery_fee])
         # shopee隱碼服務費
         self.multi_condition(self.service_fee, [self.oc.service_fee])
+        print(self.df[[self.oc.send, self.oc.service_fee]])
         # 依倉庫調整撿貨費、訂單處理費、運費
         self.df.loc[self.df[self.oc.warehouse].fillna('').str.contains(r'^(?:原廠出貨|公司倉)$', regex=True), [self.oc.tally, self.oc.order_fee]] = 0
         self.df.loc[self.df[self.oc.warehouse] == '原廠出貨', self.oc.ship] = 0
