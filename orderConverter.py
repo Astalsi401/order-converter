@@ -234,8 +234,8 @@ class Converter:
             140: [{self.oc.site: [SourceFiles().yahoo_mall.site]}, {self.oc.send: ['賣家宅配', '宅配', '常溫宅配(倉儲中心)']}],
         }
         self.service_fee = {
-            0: [{self.oc.send: ['7-ELEVEN', '7-11 取貨 (到店付款)', '全家取貨 (到店付款)']}],
-            10: [{self.oc.send: ['賣家宅配：箱購', '賣家宅配：冷凍', '宅配']}],
+            2.5: [{self.oc.send: ['7-ELEVEN', '7-11 取貨 (到店付款)', '全家取貨 (到店付款)', '全家取貨 (取貨不付款)', '蝦皮店到店']}],
+            12.5: [{self.oc.send: ['賣家宅配：箱購', '賣家宅配：冷凍', '宅配', '宅配通']}],
         }
         self.delivery_fee = {
             48: [{self.oc.send: ['全家門市取貨', '7-11門市取貨']}]
