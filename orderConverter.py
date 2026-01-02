@@ -361,7 +361,6 @@ class Converter:
         self.multi_condition(self.delivery_fee, [self.oc.delivery_fee])
         # shopee隱碼服務費
         self.multi_condition(self.service_fee, [self.oc.service_fee])
-        print(self.df[[self.oc.send, self.oc.service_fee]])
         # 依倉庫調整撿貨費、訂單處理費、運費
         self.df.loc[self.df[self.oc.warehouse].fillna('').str.contains(r'^(?:原廠出貨|公司倉)$', regex=True), [self.oc.tally, self.oc.order_fee]] = 0
         self.df.loc[self.df[self.oc.warehouse] == '原廠出貨', self.oc.ship] = 0
