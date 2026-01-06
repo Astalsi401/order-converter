@@ -269,7 +269,7 @@ class Converter:
         # 撿貨費
         self.df[self.oc.tally] = (self.df['撿貨數量'] * self.df[self.oc.number] * 7.5).fillna(0)
         # 進貨小計
-        self.df[self.oc.purchase_subtotal] = self.df[self.oc.purchase_price] * self.df[self.oc.number]
+        self.df[self.oc.purchase_subtotal] = self.df[self.oc.purchase_price].fillna(0).astype(float) * self.df[self.oc.number]
 
     def add_columns(self) -> pd.DataFrame:
         '''依據expCol補齊所需的欄位'''
