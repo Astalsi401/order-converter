@@ -231,7 +231,8 @@ class Converter:
         }
         self.ship: dict[float | int, list[dict[str, list]]] = {
             75: [{self.oc.send: ['7-ELEVEN', '7-11 取貨 (到店付款)', '全家取貨 (到店付款)', '全家門市取貨', '7-11門市取貨']}],
-            140: [{self.oc.site: [SourceFiles().yahoo_mall.site]}, {self.oc.send: ['賣家宅配', '宅配', '常溫宅配(倉儲中心)']}],
+            130: [{self.oc.send: ['宅配通']}],
+            140: [{self.oc.send: ['賣家宅配', '宅配', '常溫宅配(倉儲中心)', '賣家宅配：箱購']}, {self.oc.site: [SourceFiles().yahoo_mall.site]}],
         }
         self.service_fee: dict[float | int, list[dict[str, list]]] = {
             2.5: [{self.oc.send: ['7-ELEVEN', '7-11 取貨 (到店付款)', '全家取貨 (到店付款)', '全家取貨 (取貨不付款)', '蝦皮店到店']}],
@@ -269,7 +270,7 @@ class Converter:
         # 撿貨費
         self.df[self.oc.tally] = (self.df['撿貨數量'] * self.df[self.oc.number] * 7.5).fillna(0)
         # 進貨小計
-        self.df[self.oc.purchase_subtotal] = self.df[self.oc.purchase_price].fillna(0).astype(float) * self.df[self.oc.number]
+        self.df[self.oc.purchase_subtotal] = self.df[self.oc.purchase_price].astype(float).fillna(0) * self.df[self.oc.number]
 
     def add_columns(self) -> pd.DataFrame:
         '''依據expCol補齊所需的欄位'''
@@ -384,7 +385,7 @@ class Converter:
         self.df = self.add_columns()
         # 價格四捨五入至小數點後1位
         self.round_cols = [col for col in self.oc.round_cols if col in self.df.columns]
-        self.df[self.round_cols] = self.df[self.round_cols].fillna(0).round(1)
+        self.df[self.round_cols] = self.df[self.round_cols].astype(float).fillna(0).round(1)
         # 利潤四捨五入至整數
         self.df[self.oc.profit] = self.df[self.oc.profit].fillna(0).round(0)
         # 匯出需要的欄位
