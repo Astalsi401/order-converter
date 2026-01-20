@@ -47,7 +47,7 @@ def read_xlsx(path: str, converters: dict[str, classmethod], password=None) -> p
                 password = None
             else:
                 logging.error(f'{path} 解密失敗')
-    return pd.read_excel(data if password else path, converters=converters)
+    return pd.read_excel(data if password else path, converters=converters)  # type: ignore
 
 
 def get_files_name(path: str, ext=None) -> list[str]:
@@ -365,8 +365,8 @@ class Converter:
         # 依倉庫調整撿貨費、訂單處理費、運費
         self.df.loc[self.df[self.oc.warehouse].fillna('').str.contains(r'^(?:原廠出貨|公司倉)$', regex=True), [self.oc.tally, self.oc.order_fee]] = 0
         self.df.loc[self.df[self.oc.warehouse] == '原廠出貨', self.oc.ship] = 0
-        # 如果不是第一件商品，則'訂單金額','運費','訂單處理費','隱碼服務費','點數成本負擔'為0
-        self.order_costs = [self.oc.subtotal, self.oc.ship, self.oc.order_fee, self.oc.service_fee]
+        # 如果不是第一件商品，則'訂單金額','運費','訂單處理費','隱碼服務費','點數成本負擔','蝦幣回饋券'為0
+        self.order_costs = [self.oc.subtotal, self.oc.ship, self.oc.order_fee, self.oc.service_fee, self.oc.discount]
         self.df.loc[self.df[self.count] != 0, self.order_costs] = 0
         self.df[self.order_costs] = self.df[self.order_costs].fillna(0)
 
@@ -410,7 +410,7 @@ def main():
     [os.remove(f'{result}/{f}') for f in get_files_name(result, 'xlsx') if os.path.exists(f'{result}/{f}')]
     yahoo_mall = Converter(
         fr=[SourceFiles().yahoo_mall],
-        cov={'交易序號': str, '訂單編號': str, '店家商品料號': str, '收件人電話(日)': str, '收件人行動電話': str, '收件人郵遞區號': str, '轉單日期': str},
+        cov={'交易序號': str, '訂單編號': str, '店家商品料號': str, '收件人電話(日)': str, '收件人行動電話': str, '收件人郵遞區號': str, '轉單日期': str},  # type: ignore
         oc=OutputColumns(ColumnType().yahoo),
         price=Price(['金額小計', '超贈點折抵金額', '行銷補助金額']),
         time_fmt='%Y/%m/%d %H:%M',
@@ -418,7 +418,7 @@ def main():
     )
     shopee = Converter(
         fr=[SourceFiles().shopee],
-        cov={'訂單編號': str, '商品選項貨號': str, '收件者電話': str, '取件門市店號': str, '郵遞區號': str, '訂單成立日期': str, '蝦皮專線和包裹查詢碼 \n(請複製下方完整編號提供給您配合的物流商當做聯絡電話)': str},
+        cov={'訂單編號': str, '商品選項貨號': str, '收件者電話': str, '取件門市店號': str, '郵遞區號': str, '訂單成立日期': str, '蝦皮專線和包裹查詢碼 \n(請複製下方完整編號提供給您配合的物流商當做聯絡電話)': str},  # type: ignore
         oc=OutputColumns(ColumnType().shopee),
         price=Price(['買家總支付金額', '蝦幣折抵', '銀行信用卡活動折抵', '優惠券'], '商品活動價格'),
         time_fmt='%Y-%m-%d %H:%M',
@@ -426,7 +426,7 @@ def main():
     )
     shopline = Converter(
         fr=[SourceFiles().shopline],
-        cov={'訂單號碼': str, '郵政編號（如適用)': str, '電話號碼': str, '收件人電話號碼': str, '訂單成立日期': str, '商品貨號': str, '全家服務編號 / 7-11 店號': str},
+        cov={'訂單號碼': str, '郵政編號（如適用)': str, '電話號碼': str, '收件人電話號碼': str, '訂單成立日期': str, '商品貨號': str, '全家服務編號 / 7-11 店號': str},  # type: ignore
         oc=OutputColumns(ColumnType().shopline),
         price=Price(['付款總金額'], '商品結帳價'),
         time_fmt='%Y-%m-%d %H:%M:%S',
@@ -434,7 +434,7 @@ def main():
     )
     rakuten = Converter(
         fr=[SourceFiles().rakuten],
-        cov={'訂單日期': str, '訂單號碼': str, '收件人的電話號碼': str, '目的地郵遞區號': str, '商品管理編號 (SKU)': str},
+        cov={'訂單日期': str, '訂單號碼': str, '收件人的電話號碼': str, '目的地郵遞區號': str, '商品管理編號 (SKU)': str},  # type: ignore
         oc=OutputColumns(ColumnType().rakuten),
         price=Price(['商品總金額'], '商品價格'),
         time_fmt='%Y-%m-%d %H:%M:%S',
@@ -445,7 +445,7 @@ def main():
             cov.run()
         except ValueError as e:
             if str(e) == '無訂單資料':
-                logging.info(f'無訂單資料：{e.file}')
+                logging.info(f'無訂單資料：{e.file}')  # type: ignore
             else:
                 logging.exception(f'錯誤訊息已處存至 {logFile}')
         except:
