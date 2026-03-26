@@ -145,7 +145,7 @@ class OutputColumns:
                 '商品選項貨號': self.product_code,
                 '數量': self.number,
                 '付款方式': self.pay,
-                '賣家蝦幣回饋券': self.discount
+                '賣家負擔蝦幣回饋券': self.discount
             }
         elif self.fr == ColumnType().shopline:
             self.fee = '交易手續費2.8%\n(成交、金流)'
@@ -378,7 +378,8 @@ class Converter:
         # 利潤百分比
         self.df[self.oc.profit_pc] = (self.df[self.oc.profit] / self.df[self.oc.subtotal] * 100).round(2).astype(str) + '%'
         # 如果不是第一件商品，則'利潤','利潤百分比'為0
-        self.df.loc[self.df[self.count] != 0, [self.oc.profit, self.oc.profit_pc]] = 0
+        self.df.loc[self.df[self.count] != 0, self.oc.profit] = 0
+        self.df.loc[self.df[self.count] != 0, self.oc.profit_pc] = '0%'  # 佳賢修改
 
     def to_excel(self) -> None:
         # 補齊需要的欄位
