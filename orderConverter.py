@@ -413,7 +413,7 @@ def main():
         fr=[SourceFiles().yahoo_mall],
         cov={'交易序號': str, '訂單編號': str, '店家商品料號': str, '收件人電話(日)': str, '收件人行動電話': str, '收件人郵遞區號': str, '轉單日期': str},  # type: ignore
         oc=OutputColumns(ColumnType().yahoo),
-        price=Price(['金額小計', '超贈點折抵金額', '行銷補助金額']),
+        price=Price(['金額小計', '超贈點折抵金額', '行銷補助金額', 'OPENPOINT折抵金額']),
         time_fmt='%Y/%m/%d %H:%M',
         file_name='yahoo購物中心',
     )
