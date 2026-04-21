@@ -1,3 +1,7 @@
+#### 安裝 python
+
+python: https://www.python.org/ftp/python/3.12.4/python-3.12.4-amd64.exe
+
 #### 計算方式
 
 **付款代號**
