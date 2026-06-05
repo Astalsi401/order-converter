@@ -4,7 +4,9 @@
    需勾選 add to PATH
    ![圖片說明](install-packages/pydl.png)
 2. 下載本專案 zip 後解壓縮
+
    ![圖片說明](install-packages/image.png)
+
 3. 雙擊 `install-packages\install.bat` 安裝套件
 
 #### 計算方式
