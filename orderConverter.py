@@ -67,6 +67,7 @@ class SourceFiles:
         self.shopee = self.Source('shopee店配宅配.xlsx', 'shopee')
         self.rakuten = self.Source('rakuten店配宅配.xlsx', 'rakuten')
         self.shopline = self.Source('shopline店配宅配.xlsx', 'shopline')
+        self.coupang = self.Source('酷澎.xlsx', 'coupang')
 
 
 class ColumnType:
@@ -75,6 +76,7 @@ class ColumnType:
         self.shopee = 'shopee'
         self.shopline = 'shopline'
         self.rakuten = 'rakuten'
+        self.coupang = 'coupang'
 
 
 class OutputColumns:
@@ -195,6 +197,22 @@ class OutputColumns:
                 '配送方式': self.send,
                 '商家獎勵顧客的點數總和': self.point
             }
+        elif self.fr == ColumnType().coupang:
+            self.fee = '成交\n手續費5.5'
+            self.cash_fee = '金流費用\n(2%)'
+            self.profit_cols = [self.purchase_subtotal, self.fee, self.cash_fee, self.tally, self.order_fee, self.ship]
+            self.ship_cols = [self.code, self.site, self.customer, self.post_code, self.address, self.cel, self.date, self.product_code, self.price, self.pay_code, self.pay]
+            self.fin_cols = [self.code, self.date, self.site, self.customer, self.address, self.cel, self.product_code, self.product, self.number, self.price, self.pay_code, self.manufacture, self.purchase_price, self.purchase_subtotal, self.warehouse, self.subtotal, self.fee, self.cash_fee, self.tally, self.order_fee, self.ship, self.profit, self.profit_pc, self.pm, self.note]
+            self.rename = {
+                '訂單編號': self.code,
+                '訂購日期': self.date,
+                '訂購人姓名': self.customer,
+                '收件人地址': self.address,
+                '訂購人電話號碼': self.cel,
+                '公司商品代碼': self.product_code,
+                '數量': self.number,
+                '應開立予買家之發票金額': self.price,
+            }
         # 需四捨五入的欄位
         self.round_cols = [self.price, self.purchase_price, self.purchase_subtotal, self.fee, self.cash_fee, self.delivery_fee, self.point, self.subtotal]
 
@@ -282,6 +300,9 @@ class Converter:
 
     def preprocess(self) -> None:
         '''建立後續計算所需欄位：付款代號、辨別是否為該訂單第一件商品、訂單編號、郵遞區號取前三碼、更改訂單成立日期格式、付款方式、替換空白電話號碼為'****'、商品折扣補0、商品總金額'''
+        # 酷澎無付款方式欄位，固定視為信用卡
+        if self.oc.fr == ColumnType().coupang:
+            self.df[self.oc.pay] = '信用卡'
         # 付款代號
         self.multi_condition(self.pay_code, [self.oc.pay_code])
         # 辨別是否為該訂單第一件商品
@@ -297,7 +318,8 @@ class Converter:
         # 替換空白電話號碼為'****'
         self.df.loc[self.df[self.oc.cel].isna(), self.oc.cel] = '****'
         # 商品折扣補0
-        self.df[self.oc.discount] = self.df[self.oc.discount].fillna(0)
+        if hasattr(self.oc, 'discount'):
+            self.df[self.oc.discount] = self.df[self.oc.discount].fillna(0)
         # 商品總金額
         self.df[self.oc.price] = self.df[self.price.sum].sum(axis=1)
         # 訂單處理費
@@ -332,27 +354,35 @@ class Converter:
         elif self.oc.fr in [ColumnType().yahoo]:
             # yahoo金流費用
             self.df.loc[self.df[self.oc.pay_code] == 4, self.oc.cash_fee] = self.df[self.oc.price] * self.df[self.oc.cash_fee]
+        elif self.oc.fr in [ColumnType().coupang]:
+            # 酷澎商品總金額為訂單重複值，金流費用只算一次避免重複計算
+            self.df.loc[self.df[self.count] == 0, self.oc.cash_fee] = self.df[self.oc.price] * self.df[self.oc.cash_fee]
+            self.df.loc[self.df[self.count] != 0, self.oc.cash_fee] = 0
         if self.oc.fr in [ColumnType().shopline]:
             # shopline line購物手續費
             self.df.loc[self.df[self.oc.source_platform] == 'LINE購物', self.oc.line_fee] = self.df[self.oc.price] * 0.08 + 3
-        if self.oc.fr in [ColumnType().shopee, ColumnType().shopline, ColumnType().rakuten]:
+        if self.oc.fr in [ColumnType().shopee, ColumnType().shopline, ColumnType().rakuten, ColumnType().coupang]:
             self.df[self.oc.price] = self.df.groupby(self.oc.code)[self.oc.price].transform('first') / self.df.groupby(self.oc.code)[self.tmp].transform(lambda x: x.sum()) * self.df[self.tmp]
 
     def ship_calculate(self) -> None:
         '''計算運費'''
-        # shopline, rakuten運費須拆分至新列
-        if self.oc.fr in [ColumnType().shopline, ColumnType().rakuten]:
+        # shopline, rakuten, coupang 運費須拆分至新列
+        if self.oc.fr in [ColumnType().shopline, ColumnType().rakuten, ColumnType().coupang]:
             ship = self.df.loc[self.df['運費'] > 0].copy().assign(**{self.oc.product_code: '888888888'})
             ship[self.oc.price] = ship['運費']
             ship = ship[self.oc.ship_cols]
             self.df = pd.concat([self.df, ship]).sort_values(by=[self.oc.date, self.oc.code])
         self.df.loc[self.df[self.oc.product_code] == '888888888', self.oc.number] = 1
         # 運費
-        self.multi_condition(self.ship, [self.oc.ship])
+        if self.oc.fr == ColumnType().coupang:
+            # 酷澎無配送方式欄位，固定套用宅配運費
+            self.df[self.oc.ship] = 140
+        else:
+            self.multi_condition(self.ship, [self.oc.ship])
 
     def cost_calculate(self) -> None:
         '''計算成本'''
-        if self.oc.fr in [ColumnType().yahoo, ColumnType().rakuten]:
+        if self.oc.fr in [ColumnType().yahoo, ColumnType().rakuten, ColumnType().coupang]:
             # 訂單金額
             self.df[self.oc.subtotal] = self.df.groupby(self.oc.code)[self.price.sum].transform(lambda x: x.sum()).sum(axis=1)
         elif self.oc.fr in [ColumnType().shopee, ColumnType().shopline]:
@@ -364,9 +394,11 @@ class Converter:
         self.multi_condition(self.service_fee, [self.oc.service_fee])
         # 依倉庫調整撿貨費、訂單處理費、運費
         self.df.loc[self.df[self.oc.warehouse].fillna('').str.contains(r'^(?:原廠出貨|公司倉)$', regex=True), [self.oc.tally, self.oc.order_fee]] = 0
-        self.df.loc[self.df[self.oc.warehouse] == '原廠出貨', self.oc.ship] = 0
+        if self.oc.fr != ColumnType().coupang:
+            # 酷澎運費固定為物流倉，不因原廠出貨被歸零
+            self.df.loc[self.df[self.oc.warehouse] == '原廠出貨', self.oc.ship] = 0
         # 如果不是第一件商品，則'訂單金額','運費','訂單處理費','隱碼服務費','點數成本負擔','蝦幣回饋券'為0
-        self.order_costs = [self.oc.subtotal, self.oc.ship, self.oc.order_fee, self.oc.service_fee, self.oc.discount]
+        self.order_costs = [c for c in [self.oc.subtotal, self.oc.ship, self.oc.order_fee, self.oc.service_fee, getattr(self.oc, 'discount', None)] if c is not None and c in self.df.columns]
         self.df.loc[self.df[self.count] != 0, self.order_costs] = 0
         self.df[self.order_costs] = self.df[self.order_costs].fillna(0)
 
@@ -441,7 +473,15 @@ def main():
         time_fmt='%Y-%m-%d %H:%M:%S',
         file_name='rakuten',
     )
-    for cov in [yahoo_mall, shopee, shopline, rakuten]:
+    coupang = Converter(
+        fr=[SourceFiles().coupang],
+        cov={'訂單編號': str, '訂購日期': str, '公司商品代碼': str, '郵遞區號': str, '訂購人電話號碼': str},  # type: ignore
+        oc=OutputColumns(ColumnType().coupang),
+        price=Price(['商品總金額'], '選項價格'),
+        time_fmt='%Y-%m-%d %H:%M:%S',
+        file_name='coupang',
+    )
+    for cov in [yahoo_mall, shopee, shopline, rakuten, coupang]:
         try:
             cov.run()
         except ValueError as e:

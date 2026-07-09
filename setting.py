@@ -15,7 +15,8 @@ settings_default = {
     'yahoo購物中心': {'feeRate': {'rate': 0.15, 'add': 2}, 'password': ''},
     'shopee': {'feeRate': {'rate': 0.135, 'add': 0}, 'password': ''},
     'shopline': {'feeRate': {'rate': 0.028, 'add': 0}, 'password': ''},
-    'rakuten': {'feeRate': {'rate': 0, 'add': 0}, 'password': ''}
+    'rakuten': {'feeRate': {'rate': 0, 'add': 0}, 'password': ''},
+    'coupang': {'feeRate': {'rate': 0.055, 'add': 0}, 'password': ''},
 }
 # dump(settings_default, open(setting_pkl, 'wb'))
 
@@ -25,7 +26,7 @@ class GUI:
         # 如果有設定檔則讀取
         self.settings = load(open(setting_pkl, 'rb')) if os.path.exists(setting_pkl) else settings_default
         # 如果更新後sources數量增加則新增預設數值
-        self.settings = {k: {**v, **self.settings[k]} for k, v in settings_default.items()}
+        self.settings = {k: {**v, **(self.settings[k] if k in self.settings else {})} for k, v in settings_default.items()}
         self.sources = list(self.settings.keys())
         self.root = root
         self.root.geometry('500x400')
