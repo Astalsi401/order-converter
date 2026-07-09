@@ -341,6 +341,9 @@ class Converter:
         if self.oc.fr in [ColumnType().shopee]:
             # shopee刪除非手機號碼字串
             self.df[self.oc.cel] = self.df[self.oc.cel].replace(r'#\d$', '', regex=True)
+        if self.oc.fr in [ColumnType().coupang]:
+            # coupang商品總金額要減掉運費
+            self.df[self.oc.price] = self.df[self.oc.price] - self.df['運費']
 
     def cols_basic_price(self) -> None:
         '''需根據訂單總金額計算的欄位'''
