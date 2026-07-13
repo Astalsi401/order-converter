@@ -16,7 +16,7 @@ settings_default = {
     'shopee': {'feeRate': {'rate': 0.135, 'add': 0}, 'password': ''},
     'shopline': {'feeRate': {'rate': 0.028, 'add': 0}, 'password': ''},
     'rakuten': {'feeRate': {'rate': 0, 'add': 0}, 'password': ''},
-    'coupang': {'feeRate': {'rate': 0.055, 'add': 0}, 'password': ''},
+    'Coupang酷澎': {'feeRate': {'rate': 0.055, 'add': 0}, 'password': ''},
 }
 # dump(settings_default, open(setting_pkl, 'wb'))
 

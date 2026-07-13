@@ -67,7 +67,7 @@ class SourceFiles:
         self.shopee = self.Source('shopee店配宅配.xlsx', 'shopee')
         self.rakuten = self.Source('rakuten店配宅配.xlsx', 'rakuten')
         self.shopline = self.Source('shopline店配宅配.xlsx', 'shopline')
-        self.coupang = self.Source('酷澎.xlsx', 'coupang')
+        self.coupang = self.Source('Coupang酷澎宅配.xlsx', 'Coupang酷澎')
 
 
 class ColumnType:
@@ -482,7 +482,7 @@ def main():
         oc=OutputColumns(ColumnType().coupang),
         price=Price(['商品總金額'], '選項價格'),
         time_fmt='%Y-%m-%d %H:%M:%S',
-        file_name='coupang',
+        file_name='Coupang酷澎',
     )
     for cov in [yahoo_mall, shopee, shopline, rakuten, coupang]:
         try:
