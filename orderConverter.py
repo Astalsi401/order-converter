@@ -344,6 +344,10 @@ class Converter:
         if self.oc.fr in [ColumnType().coupang]:
             # coupang商品總金額要減掉運費
             self.df[self.oc.price] = self.df[self.oc.price] - self.df['運費']
+            # 收件人姓名、住址、電話應該是固定的資料
+            self.df[self.oc.customer] = '競合國際行銷(股)-蔡紫瀅'
+            self.df[self.oc.address] = '台北市南港區忠孝東路七段508號1樓'
+            self.df[self.oc.cel] = '02-26558199'
 
     def cols_basic_price(self) -> None:
         '''需根據訂單總金額計算的欄位'''
