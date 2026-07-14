@@ -367,16 +367,16 @@ class Converter:
         if self.oc.fr in [ColumnType().coupang]:
             # coupang商品總金額要減掉運費
             self.df[self.oc.price] = self.df[self.oc.price] - self.df['運費']
+        if self.oc.fr in [ColumnType().coupang, ColumnType().momo]:
             # 收件人姓名、住址、電話應該是固定的資料
             self.df[self.oc.customer] = '競合國際行銷(股)-蔡紫瀅'
             self.df[self.oc.address] = '台北市南港區忠孝東路七段508號1樓'
             self.df[self.oc.cel] = '02-26558199'
         if self.oc.fr in [ColumnType().momo]:
-            # momo商品總金額要加上全站商店抵用券(負值)
-            self.df[self.oc.price] = self.df[self.oc.price] + self.df['全站商店抵用券']
+            # momo商品總金額 - 全站商店抵用券(負值)
+            self.df[self.oc.price] = self.df[self.oc.price] - self.df['全站商店抵用券']
             # momo無「運費」欄位，改以平台代扣運費金額(取絕對值)獨立列出；來源欄位為訂單重複值，只取第一件商品避免重複計算
-            self.df['運費'] = 0
-            self.df.loc[self.df[self.count] == 0, '運費'] = self.df.loc[self.df[self.count] == 0, '預估平台代扣運費(鑑賞期後:平台代扣運費)'].abs()
+            self.df['運費'] = self.df['預估平台代扣運費(鑑賞期後:平台代扣運費)'].abs()
 
     def cols_basic_price(self) -> None:
         '''需根據訂單總金額計算的欄位'''
@@ -417,6 +417,8 @@ class Converter:
         if self.oc.fr != ColumnType().coupang:
             # 酷澎無配送方式欄位
             self.multi_condition(self.ship, [self.oc.ship])
+        if self.oc.fr in [ColumnType().momo]:
+            self.df[self.oc.ship] = self.df['運費']
 
     def cost_calculate(self) -> None:
         '''計算成本'''
@@ -434,7 +436,10 @@ class Converter:
         # shopee隱碼服務費
         self.multi_condition(self.service_fee, [self.oc.service_fee])
         # 依倉庫調整運費
-        self.multi_condition(self.ship_by_warehouse, [self.oc.ship])
+        if self.oc.fr in [ColumnType().momo]:
+            self.df.loc[self.df[self.oc.warehouse] == '物流倉', self.oc.ship] = 140
+        else:
+            self.multi_condition(self.ship_by_warehouse, [self.oc.ship])
         # 依倉庫調整撿貨費、訂單處理費
         self.df.loc[self.df[self.oc.warehouse].fillna('').str.contains(r'^(?:原廠出貨|公司倉)$', regex=True), [self.oc.tally, self.oc.order_fee]] = 0
         # 如果不是第一件商品，則'訂單金額','運費','訂單處理費','隱碼服務費','點數成本負擔','蝦幣回饋券'為0
