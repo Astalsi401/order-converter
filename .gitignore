@@ -1,6 +1,7 @@
 # source and setting
 設定/*
 待轉檔/*.xlsx
+待轉檔/*.xls
 import/*.xlsx
 examples/*
 tmp.py

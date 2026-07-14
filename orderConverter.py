@@ -68,7 +68,7 @@ class SourceFiles:
         self.rakuten = self.Source('rakuten店配宅配.xlsx', 'rakuten')
         self.shopline = self.Source('shopline店配宅配.xlsx', 'shopline')
         self.coupang = self.Source('Coupang酷澎宅配.xlsx', 'Coupang酷澎')
-        self.momo = self.Source('mo店+宅配.xlsx', 'mo店+')
+        self.momo = self.Source('mo店+宅配.xls', 'mo店+')
 
 
 class ColumnType:
