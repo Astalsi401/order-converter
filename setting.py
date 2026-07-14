@@ -17,6 +17,7 @@ settings_default = {
     'shopline': {'feeRate': {'rate': 0.028, 'add': 0}, 'password': ''},
     'rakuten': {'feeRate': {'rate': 0, 'add': 0}, 'password': ''},
     'Coupang酷澎': {'feeRate': {'rate': 0.055, 'add': 0}, 'password': ''},
+    'mo店+': {'feeRate': {'rate': 0, 'add': 0}, 'password': '16296628'},
 }
 # dump(settings_default, open(setting_pkl, 'wb'))
 

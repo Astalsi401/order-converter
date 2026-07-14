@@ -68,6 +68,7 @@ class SourceFiles:
         self.rakuten = self.Source('rakuten店配宅配.xlsx', 'rakuten')
         self.shopline = self.Source('shopline店配宅配.xlsx', 'shopline')
         self.coupang = self.Source('Coupang酷澎宅配.xlsx', 'Coupang酷澎')
+        self.momo = self.Source('mo店+宅配.xlsx', 'mo店+')
 
 
 class ColumnType:
@@ -77,6 +78,7 @@ class ColumnType:
         self.shopline = 'shopline'
         self.rakuten = 'rakuten'
         self.coupang = 'coupang'
+        self.momo = 'momo'
 
 
 class OutputColumns:
@@ -213,6 +215,20 @@ class OutputColumns:
                 '數量': self.number,
                 '應開立予買家之發票金額': self.price,
             }
+        elif self.fr == ColumnType().momo:
+            self.fee = '成交手續費\n(含加值服務費)'
+            self.profit_cols = [self.purchase_subtotal, self.fee, self.cash_fee, self.tally, self.order_fee, self.ship]
+            self.ship_cols = [self.code, self.site, self.customer, self.address, self.cel, self.date, self.product_code, self.price, self.pay_code, self.pay]
+            self.fin_cols = [self.code, self.date, self.site, self.customer, self.address, self.cel, self.product_code, self.product, self.number, self.price, self.pay_code, self.manufacture, self.purchase_price, self.purchase_subtotal, self.warehouse, self.subtotal, self.fee, self.cash_fee, self.tally, self.order_fee, self.ship, self.profit, self.profit_pc, self.pm, self.note]
+            self.rename = {
+                '訂單編號': self.code,
+                '收件人姓名': self.customer,
+                '收件人電話': self.cel,
+                '收件人地址': self.address,
+                '轉單日': self.date,
+                '商品原廠編號': self.product_code,
+                '數量': self.number,
+            }
         # 需四捨五入的欄位
         self.round_cols = [self.price, self.purchase_price, self.purchase_subtotal, self.fee, self.cash_fee, self.delivery_fee, self.point, self.subtotal]
 
@@ -251,6 +267,11 @@ class Converter:
             75: [{self.oc.send: ['7-ELEVEN', '7-11 取貨 (到店付款)', '全家取貨 (到店付款)', '全家門市取貨', '7-11門市取貨']}],
             130: [{self.oc.send: ['宅配通']}],
             140: [{self.oc.send: ['賣家宅配', '宅配', '常溫宅配(倉儲中心)', '賣家宅配：箱購']}, {self.oc.site: [SourceFiles().yahoo_mall.site]}],
+        }
+        self.ship_by_warehouse: dict[float | int, list[dict[str, list]]] = {
+            0: [{self.oc.warehouse: ['公司倉']}],
+            67: [{self.oc.warehouse: ['原廠出貨']}],
+            140: [{self.oc.warehouse: ['物流倉']}],
         }
         self.service_fee: dict[float | int, list[dict[str, list]]] = {
             2.5: [{self.oc.send: ['7-ELEVEN', '7-11 取貨 (到店付款)', '全家取貨 (到店付款)', '全家取貨 (取貨不付款)', '蝦皮店到店']}],
@@ -300,9 +321,11 @@ class Converter:
 
     def preprocess(self) -> None:
         '''建立後續計算所需欄位：付款代號、辨別是否為該訂單第一件商品、訂單編號、郵遞區號取前三碼、更改訂單成立日期格式、付款方式、替換空白電話號碼為'****'、商品折扣補0、商品總金額'''
-        # 酷澎無付款方式欄位，固定視為信用卡
-        if self.oc.fr == ColumnType().coupang:
+        # 酷澎、momo無付款方式欄位，固定視為信用卡
+        if self.oc.fr in [ColumnType().coupang, ColumnType().momo]:
             self.df[self.oc.pay] = '信用卡'
+        if self.oc.fr in [ColumnType().momo]:
+            self.df[self.oc.post_code] = self.df[self.oc.address]
         # 付款代號
         self.multi_condition(self.pay_code, [self.oc.pay_code])
         # 辨別是否為該訂單第一件商品
@@ -348,6 +371,12 @@ class Converter:
             self.df[self.oc.customer] = '競合國際行銷(股)-蔡紫瀅'
             self.df[self.oc.address] = '台北市南港區忠孝東路七段508號1樓'
             self.df[self.oc.cel] = '02-26558199'
+        if self.oc.fr in [ColumnType().momo]:
+            # momo商品總金額要加上全站商店抵用券(負值)
+            self.df[self.oc.price] = self.df[self.oc.price] + self.df['全站商店抵用券']
+            # momo無「運費」欄位，改以平台代扣運費金額(取絕對值)獨立列出；來源欄位為訂單重複值，只取第一件商品避免重複計算
+            self.df['運費'] = 0
+            self.df.loc[self.df[self.count] == 0, '運費'] = self.df.loc[self.df[self.count] == 0, '預估平台代扣運費(鑑賞期後:平台代扣運費)'].abs()
 
     def cols_basic_price(self) -> None:
         '''需根據訂單總金額計算的欄位'''
@@ -365,26 +394,28 @@ class Converter:
             # 酷澎商品總金額為訂單重複值，金流費用只算一次避免重複計算
             self.df.loc[self.df[self.count] == 0, self.oc.cash_fee] = self.df[self.oc.price] * self.df[self.oc.cash_fee]
             self.df.loc[self.df[self.count] != 0, self.oc.cash_fee] = 0
+        elif self.oc.fr in [ColumnType().momo]:
+            # momo成交手續費、金流費用直接來自來源檔欄位加總，來源為負值需取正
+            self.df.loc[self.df[self.count] == 0, self.oc.fee] = -(self.df['成交手續費'] + self.df['預購商品服務費'] + self.df['物流隱碼服務費'] + self.df['發票處理費'])
+            self.df.loc[self.df[self.count] == 0, self.oc.cash_fee] = -self.df['金流與系統處理費']
         if self.oc.fr in [ColumnType().shopline]:
             # shopline line購物手續費
             self.df.loc[self.df[self.oc.source_platform] == 'LINE購物', self.oc.line_fee] = self.df[self.oc.price] * 0.08 + 3
-        if self.oc.fr in [ColumnType().shopee, ColumnType().shopline, ColumnType().rakuten, ColumnType().coupang]:
+        if self.oc.fr in [ColumnType().shopee, ColumnType().shopline, ColumnType().rakuten, ColumnType().coupang, ColumnType().momo]:
             self.df[self.oc.price] = self.df.groupby(self.oc.code)[self.oc.price].transform('first') / self.df.groupby(self.oc.code)[self.tmp].transform(lambda x: x.sum()) * self.df[self.tmp]
 
     def ship_calculate(self) -> None:
         '''計算運費'''
-        # shopline, rakuten, coupang 運費須拆分至新列
-        if self.oc.fr in [ColumnType().shopline, ColumnType().rakuten, ColumnType().coupang]:
+        # shopline, rakuten, coupang, momo 運費須拆分至新列
+        if self.oc.fr in [ColumnType().shopline, ColumnType().rakuten, ColumnType().coupang, ColumnType().momo]:
             ship = self.df.loc[self.df['運費'] > 0].copy().assign(**{self.oc.product_code: '888888888'})
             ship[self.oc.price] = ship['運費']
             ship = ship[self.oc.ship_cols]
             self.df = pd.concat([self.df, ship]).sort_values(by=[self.oc.date, self.oc.code])
         self.df.loc[self.df[self.oc.product_code] == '888888888', self.oc.number] = 1
         # 運費
-        if self.oc.fr == ColumnType().coupang:
-            # 酷澎無配送方式欄位，固定套用宅配運費
-            self.df[self.oc.ship] = 140
-        else:
+        if self.oc.fr != ColumnType().coupang:
+            # 酷澎無配送方式欄位
             self.multi_condition(self.ship, [self.oc.ship])
 
     def cost_calculate(self) -> None:
@@ -395,15 +426,17 @@ class Converter:
         elif self.oc.fr in [ColumnType().shopee, ColumnType().shopline]:
             # 訂單金額
             self.df[self.oc.subtotal] = self.df[self.price.sum].sum(axis=1)
+        elif self.oc.fr in [ColumnType().momo]:
+            # momo訂單金額=分攤後的商品總金額加總
+            self.df[self.oc.subtotal] = self.df.groupby(self.oc.code)[self.oc.price].transform('sum')
         # rakuten物流交寄使用費
         self.multi_condition(self.delivery_fee, [self.oc.delivery_fee])
         # shopee隱碼服務費
         self.multi_condition(self.service_fee, [self.oc.service_fee])
-        # 依倉庫調整撿貨費、訂單處理費、運費
+        # 依倉庫調整運費
+        self.multi_condition(self.ship_by_warehouse, [self.oc.ship])
+        # 依倉庫調整撿貨費、訂單處理費
         self.df.loc[self.df[self.oc.warehouse].fillna('').str.contains(r'^(?:原廠出貨|公司倉)$', regex=True), [self.oc.tally, self.oc.order_fee]] = 0
-        if self.oc.fr != ColumnType().coupang:
-            # 酷澎運費固定為物流倉，不因原廠出貨被歸零
-            self.df.loc[self.df[self.oc.warehouse] == '原廠出貨', self.oc.ship] = 0
         # 如果不是第一件商品，則'訂單金額','運費','訂單處理費','隱碼服務費','點數成本負擔','蝦幣回饋券'為0
         self.order_costs = [c for c in [self.oc.subtotal, self.oc.ship, self.oc.order_fee, self.oc.service_fee, getattr(self.oc, 'discount', None)] if c is not None and c in self.df.columns]
         self.df.loc[self.df[self.count] != 0, self.order_costs] = 0
@@ -488,7 +521,15 @@ def main():
         time_fmt='%Y-%m-%d %H:%M:%S',
         file_name='Coupang酷澎',
     )
-    for cov in [yahoo_mall, shopee, shopline, rakuten, coupang]:
+    momo = Converter(
+        fr=[SourceFiles().momo],
+        cov={'訂單編號': str, '轉單日': str, '商品原廠編號': str, '收件人電話': str},  # type: ignore
+        oc=OutputColumns(ColumnType().momo),
+        price=Price(['訂單金額加總'], '商品售價'),
+        time_fmt='%Y/%m/%d %H:%M',
+        file_name='mo店+',
+    )
+    for cov in [yahoo_mall, shopee, shopline, rakuten, coupang, momo]:
         try:
             cov.run()
         except ValueError as e:
